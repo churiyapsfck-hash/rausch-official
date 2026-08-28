@@ -56,7 +56,7 @@ function CosmicStarfield({ mobile }: { mobile: boolean }) {
   const dustRef = useRef<THREE.Points>(null);
 
   const [starPositions, starColors, starSizes, starPhases] = useMemo(() => {
-    const count = mobile ? 600 : 1800;
+    const count = mobile ? 500 : 1600;
     const pos = new Float32Array(count * 3);
     const col = new Float32Array(count * 3);
     const sz = new Float32Array(count);
@@ -64,24 +64,28 @@ function CosmicStarfield({ mobile }: { mobile: boolean }) {
 
     const colors = [
       new THREE.Color("#ffffff"),
-      new THREE.Color("#f0f7ff"),
-      new THREE.Color("#d8e8ff"),
-      new THREE.Color("#eee6ff"),
+      new THREE.Color("#e8f0fe"),
       new THREE.Color("#d0e2ff"),
+      new THREE.Color("#eae4ff"),
+      new THREE.Color("#c8d6f0"),
     ];
 
     for (let i = 0; i < count; i++) {
-      // Wide frustum distribution across 3D space
-      pos[i * 3] = (Math.random() - 0.5) * 44;
-      pos[i * 3 + 1] = (Math.random() - 0.5) * 36;
-      pos[i * 3 + 2] = -Math.random() * 26 - 1.5; // spanning right behind moon and deep into void
+      // Celestial sphere distribution
+      const r = 25 + Math.random() * 50;
+      const theta = Math.random() * Math.PI * 2;
+      const phi = Math.acos(2 * Math.random() - 1);
+
+      pos[i * 3] = r * Math.sin(phi) * Math.cos(theta);
+      pos[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta);
+      pos[i * 3 + 2] = r * Math.cos(phi) - 5; // offset slightly behind
 
       const c = colors[Math.floor(Math.random() * colors.length)]!;
       col[i * 3] = c.r;
       col[i * 3 + 1] = c.g;
       col[i * 3 + 2] = c.b;
 
-      sz[i] = Math.random() < 0.15 ? 2.0 + Math.random() * 1.8 : 0.9 + Math.random() * 1.1;
+      sz[i] = Math.random() < 0.12 ? 1.8 + Math.random() * 1.5 : 0.8 + Math.random() * 0.9;
       ph[i] = Math.random() * Math.PI * 2;
     }
 
@@ -89,18 +93,18 @@ function CosmicStarfield({ mobile }: { mobile: boolean }) {
   }, [mobile]);
 
   const [dustPositions, dustColors] = useMemo(() => {
-    const count = mobile ? 140 : 450;
+    const count = mobile ? 120 : 400;
     const pos = new Float32Array(count * 3);
     const col = new Float32Array(count * 3);
 
     for (let i = 0; i < count; i++) {
       pos[i * 3] = (Math.random() - 0.5) * 40;
-      pos[i * 3 + 1] = (Math.random() - 0.5) * 38;
-      pos[i * 3 + 2] = (Math.random() - 0.5) * 28 - 6;
+      pos[i * 3 + 1] = (Math.random() - 0.5) * 40;
+      pos[i * 3 + 2] = (Math.random() - 0.5) * 30 - 10;
 
-      const brightness = 0.35 + Math.random() * 0.45;
-      col[i * 3] = brightness * 0.85;
-      col[i * 3 + 1] = brightness * 0.95;
+      const brightness = 0.2 + Math.random() * 0.4;
+      col[i * 3] = brightness * 0.8;
+      col[i * 3 + 1] = brightness * 0.9;
       col[i * 3 + 2] = brightness * 1.0;
     }
     return [pos, col];
@@ -114,8 +118,8 @@ function CosmicStarfield({ mobile }: { mobile: boolean }) {
     const ctx = canvas.getContext("2d")!;
     const grad = ctx.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
     grad.addColorStop(0, "rgba(255, 255, 255, 1)");
-    grad.addColorStop(0.25, "rgba(240, 248, 255, 0.95)");
-    grad.addColorStop(0.55, "rgba(185, 215, 255, 0.45)");
+    grad.addColorStop(0.25, "rgba(235, 245, 255, 0.85)");
+    grad.addColorStop(0.6, "rgba(180, 210, 255, 0.25)");
     grad.addColorStop(1, "rgba(0, 0, 0, 0)");
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, size, size);
@@ -143,11 +147,11 @@ function CosmicStarfield({ mobile }: { mobile: boolean }) {
           <bufferAttribute attach="attributes-color" args={[starColors, 3]} />
         </bufferGeometry>
         <pointsMaterial
-          size={mobile ? 0.22 : 0.16}
+          size={mobile ? 0.16 : 0.12}
           map={starTexture}
           vertexColors
           transparent
-          opacity={1.0}
+          opacity={0.85}
           blending={THREE.AdditiveBlending}
           depthWrite={false}
           sizeAttenuation
@@ -160,11 +164,11 @@ function CosmicStarfield({ mobile }: { mobile: boolean }) {
           <bufferAttribute attach="attributes-color" args={[dustColors, 3]} />
         </bufferGeometry>
         <pointsMaterial
-          size={mobile ? 0.30 : 0.24}
+          size={mobile ? 0.26 : 0.22}
           map={starTexture}
           vertexColors
           transparent
-          opacity={0.45}
+          opacity={0.35}
           blending={THREE.AdditiveBlending}
           depthWrite={false}
           sizeAttenuation
@@ -429,132 +433,110 @@ function RealMoon({ mobile }: { mobile: boolean }) {
     const baseSunY = 0.6;
     const baseSunZ = 1.5;
 
-    // 2. Passes chapter timeline (Continuous orbit across 4 passes: General, VIP, Couple General, Couple VIP)
+    // 2. PASSES TIMELINE (Mobile Vertical Floating Choreography)
     const passGx = mobile
       ? 0.0
       : track(pt, [
-          [0.0, -0.48], // General (Standard): Left
-          [0.20, -0.48],
-          [0.25, 0.0],
-          [0.32, 0.48], // VIP Access: Right
-          [0.48, 0.48],
-          [0.53, 0.0],
-          [0.60, -0.48], // Couple General: Left
-          [0.74, -0.48],
-          [0.80, 0.0], // Couple VIP: Centered
+          [0.0, -0.48], // Standard: Moon on Left (Text on Right)
+          [0.35, -0.48],
+          [0.45, 0.0], // Transition
+          [0.55, 0.48], // VIP: Moon on Right (Text on Left)
+          [0.7, 0.48],
+          [0.8, 0.0], // Table Orbit: Central iconic eclipse framing
           [1.0, 0.0],
         ]);
 
     const passGy = mobile
       ? track(pt, [
-          [0.0, 0.28], // General on mobile
-          [0.20, 0.28],
-          [0.32, 0.22], // VIP on mobile
-          [0.48, 0.22],
-          [0.60, 0.28], // Couple General on mobile
-          [0.74, 0.28],
-          [0.82, 0.16], // Couple VIP Eclipse on mobile
+          [0.0, 0.28], // Standard on mobile: Floats in upper viewport above Standard card
+          [0.35, 0.28],
+          [0.45, 0.24], // Transition
+          [0.55, 0.22], // VIP on mobile: Sits gracefully in upper-mid
+          [0.7, 0.22],
+          [0.8, 0.16], // Table Orbit on mobile: Centers right behind Eclipse
           [1.0, 0.16],
         ])
       : track(pt, [
           [0.0, -0.02],
-          [0.20, -0.02],
-          [0.32, 0.02],
-          [0.48, 0.02],
-          [0.60, -0.02],
-          [0.74, -0.02],
-          [0.82, 0.0],
+          [0.25, -0.02],
+          [0.6, 0.02],
+          [0.85, 0.02],
           [1.0, 0.0],
         ]);
 
-    // Scale progression
+    // Restrained scale progression
     const passScale = mobile
       ? track(pt, [
-          [0.0, 0.62],
-          [0.20, 0.64],
-          [0.32, 0.70],
-          [0.48, 0.72],
-          [0.60, 0.64],
-          [0.74, 0.66],
-          [0.82, 0.80], // Couple VIP Eclipse
-          [1.0, 0.72],
+          [0.0, 0.62], // Standard: 62% scale on mobile
+          [0.35, 0.65],
+          [0.55, 0.70], // VIP: 70% scale on mobile
+          [0.7, 0.72],
+          [0.85, 0.80], // Table Orbit: 80% scale for dramatic Eclipse
+          [1.0, 0.70],
         ])
       : track(pt, [
-          [0.0, 0.88],
-          [0.20, 0.90],
-          [0.32, 0.98],
-          [0.48, 1.02],
-          [0.60, 0.90],
-          [0.74, 0.92],
-          [0.82, 1.25], // Couple VIP Eclipse
-          [1.0, 0.92],
+          [0.0, 0.88], // Standard: 42-44vw
+          [0.35, 0.92],
+          [0.55, 1.0], // VIP: 46-48vw
+          [0.7, 1.05],
+          [0.85, 1.25], // Table Orbit: 54-58vw
+          [1.0, 0.9],
         ]);
 
-    // Virtual Orbital Light Path
+    // Virtual Orbital Light Path (Inward grazing front-side angles for Standard/VIP, solar backlight for Table Orbit)
     const passLightX = track(pt, [
-      [0.0, mobile ? 2.2 : 2.8], // General: Moon Left -> Light Right
-      [0.20, mobile ? 2.2 : 2.8],
-      [0.26, 0.0],
-      [0.32, mobile ? -2.2 : -2.8], // VIP: Moon Right -> Light Left
-      [0.48, mobile ? -2.2 : -2.8],
-      [0.54, 0.0],
-      [0.60, mobile ? 2.2 : 2.8], // Couple General: Moon Left -> Light Right
-      [0.74, mobile ? 2.2 : 2.8],
-      [0.80, 0.0], // Couple VIP: Direct Solar Backlight
-      [1.0, 0.0],
+      [0.0, mobile ? 2.2 : 2.8], // Standard: Moon on Left -> Light from Right-Front illuminating crater face
+      [0.35, mobile ? 2.2 : 2.8],
+      [0.45, 0.0], // Transition
+      [0.55, mobile ? -2.2 : -2.8], // VIP: Moon on Right -> Light from Left-Front illuminating crater face
+      [0.7, mobile ? -2.2 : -2.8],
+      [0.8, 0.0], // Table Orbit: Direct Solar Backlight
+      [1.0, 3.2],
     ]);
 
     const passLightY = track(pt, [
       [0.0, 0.5],
-      [0.20, 0.5],
-      [0.35, 0.5],
-      [0.60, 0.5],
-      [0.82, 0.8],
+      [0.23, 0.5],
+      [0.55, 0.5],
+      [0.86, 0.8],
       [1.0, 0.6],
     ]);
 
     const passLightZ = track(pt, [
       [0.0, 1.6],
-      [0.20, 1.6],
-      [0.26, 0.5],
-      [0.32, 1.6], // VIP
-      [0.48, 1.6],
-      [0.54, 0.5],
-      [0.60, 1.6], // Couple General
-      [0.74, 1.6],
-      [0.80, -1.0], // Transition to eclipse
-      [0.86, -3.8], // Couple VIP: Solar eclipse beam from behind
+      [0.23, 1.6], // Standard: Raking front angle revealing rich crater depth
+      [0.42, 0.5], // Transition
+      [0.55, 1.6], // VIP: Rich relief raking front angle
+      [0.72, -1.0], // Transition to eclipse
+      [0.86, -3.8], // Table Orbit: Solar eclipse beam from behind
       [1.0, 1.5],
     ]);
 
     const passLightIntensity = track(pt, [
       [0.0, 5.0],
-      [0.18, 6.2],
-      [0.26, 1.2],
-      [0.35, 6.5],
-      [0.52, 1.2],
-      [0.65, 6.2],
-      [0.78, 1.5],
-      [0.86, 8.5], // Couple VIP: Intense solar rim
+      [0.23, 6.2], // Standard: High-contrast crater profile
+      [0.39, 0.4], // Void 1
+      [0.55, 6.5], // VIP: High-contrast crater profile
+      [0.71, 0.4], // Void 2
+      [0.86, 8.5], // Table Orbit: Intense silver rim
       [1.0, 5.5],
     ]);
 
-    // Corona Ring Intensity (Active during Couple VIP eclipse)
+    // Corona Ring Intensity (Only active during Table Orbit eclipse)
     const passEclipseIntensity = track(pt, [
       [0.0, 0.0],
-      [0.76, 0.0],
-      [0.82, 0.4],
-      [0.88, 1.0], // Silver rim corona
-      [0.96, 0.4],
+      [0.55, 0.0],
+      [0.71, 0.1],
+      [0.86, 1.0], // Table Orbit: Silver rim corona
+      [0.94, 0.6],
       [1.0, 0.0],
     ]);
 
-    // Crater Ridge Specular Highlight
-    const isNearP1 = Math.abs(pt - 0.15) < 0.035;
-    const isNearP2 = Math.abs(pt - 0.40) < 0.035;
-    const isNearP3 = Math.abs(pt - 0.67) < 0.035;
-    const isNearP4 = Math.abs(pt - 0.88) < 0.035;
-    const craterGlint = isNearP1 || isNearP2 || isNearP3 || isNearP4 ? 2.5 : 0;
+    // Crater Ridge Specular Highlight (Feedback glint when locked into a checkpoint)
+    const isNearP1 = Math.abs(pt - 0.23) < 0.035;
+    const isNearP2 = Math.abs(pt - 0.55) < 0.035;
+    const isNearP3 = Math.abs(pt - 0.86) < 0.035;
+    const craterGlint = isNearP1 || isNearP2 || isNearP3 ? 2.5 : 0;
 
     if (craterHighlight.current) {
       craterHighlight.current.intensity = THREE.MathUtils.damp(
@@ -563,26 +545,24 @@ function RealMoon({ mobile }: { mobile: boolean }) {
         6.0,
         d,
       );
-      if (isNearP1 || isNearP3) craterHighlight.current.position.set(0.6, 0.2, 0.8);
+      if (isNearP1) craterHighlight.current.position.set(0.6, 0.2, 0.8);
       else if (isNearP2) craterHighlight.current.position.set(-0.6, 0.2, 0.8);
-      else if (isNearP4) craterHighlight.current.position.set(0.0, 0.65, 0.8);
+      else if (isNearP3) craterHighlight.current.position.set(0.0, 0.65, 0.8);
     }
 
     const passCamZ = mobile
       ? track(pt, [
           [0.0, 4.4],
-          [0.20, 4.4],
-          [0.35, 4.3],
-          [0.60, 4.4],
+          [0.23, 4.4],
+          [0.55, 4.3],
           [0.86, 4.2],
           [1.0, 4.4],
         ])
       : track(pt, [
           [0.0, 3.8],
-          [0.20, 3.8],
-          [0.35, 3.55], // VIP
-          [0.60, 3.8], // Couple General
-          [0.86, 3.7], // Couple VIP
+          [0.23, 3.8],
+          [0.55, 3.55], // VIP: 5-8% closer
+          [0.86, 3.7], // Table Orbit
           [1.0, 3.8],
         ]);
 
@@ -601,22 +581,11 @@ function RealMoon({ mobile }: { mobile: boolean }) {
     camera.position.z = THREE.MathUtils.damp(camera.position.z, targetCamZ, dampCam * 0.9, d);
     camera.lookAt(0, 0, 0);
 
-    const isIntroRausch = scrollState.introPhase === "rausch";
-    const isIntroMoon = scrollState.introPhase === "light_spin" || scrollState.introPhase === "moon_fade_in";
-
     // 4. Moon Group Transformations
     if (group.current) {
-      let targetGx = THREE.MathUtils.lerp(baseGx, passGx, blend);
-      let targetGy = THREE.MathUtils.lerp(baseGy, passGy, blend);
-      let targetScale = THREE.MathUtils.lerp(baseScale, passScale, blend);
-
-      if (isIntroRausch) {
-        targetScale = 0;
-      } else if (isIntroMoon) {
-        targetGx = 0;
-        targetGy = 0;
-        targetScale = mobile ? 0.85 : 1.1;
-      }
+      const targetGx = THREE.MathUtils.lerp(baseGx, passGx, blend);
+      const targetGy = THREE.MathUtils.lerp(baseGy, passGy, blend);
+      const targetScale = THREE.MathUtils.lerp(baseScale, passScale, blend);
 
       const targetGzRot = track(p, [
         [0, -0.12],
@@ -641,19 +610,10 @@ function RealMoon({ mobile }: { mobile: boolean }) {
 
     // 5. Directional Light (Sun)
     if (sunLight.current) {
-      let targetSunX = THREE.MathUtils.lerp(baseSunX, passLightX, blend) + ptrX * 1.5;
-      let targetSunY = THREE.MathUtils.lerp(baseSunY, passLightY, blend) - ptrY * 1.2;
-      let targetSunZ = THREE.MathUtils.lerp(baseSunZ, passLightZ, blend);
-      let targetSunIntensity = THREE.MathUtils.lerp(baseSunIntensity, passLightIntensity, blend);
-
-      if (isIntroRausch) {
-        targetSunIntensity = 0;
-      } else if (isIntroMoon) {
-        targetSunX = 2.5;
-        targetSunY = 0.5;
-        targetSunZ = 2.0;
-        targetSunIntensity = 8.5;
-      }
+      const targetSunX = THREE.MathUtils.lerp(baseSunX, passLightX, blend) + ptrX * 1.5;
+      const targetSunY = THREE.MathUtils.lerp(baseSunY, passLightY, blend) - ptrY * 1.2;
+      const targetSunZ = THREE.MathUtils.lerp(baseSunZ, passLightZ, blend);
+      const targetSunIntensity = THREE.MathUtils.lerp(baseSunIntensity, passLightIntensity, blend);
 
       sunLight.current.position.x = THREE.MathUtils.damp(
         sunLight.current.position.x,
