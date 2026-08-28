@@ -266,20 +266,100 @@ export function AdminPage() {
     );
   }
 
+  const [inlineEmail, setInlineEmail] = useState("");
+  const [inlinePass, setInlinePass] = useState("");
+  const [inlineLoading, setInlineLoading] = useState(false);
+  const [inlineError, setInlineError] = useState("");
+
+  const handleInlineLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setInlineLoading(true);
+    setInlineError("");
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: inlineEmail.trim(),
+        password: inlinePass,
+      });
+      if (error) throw error;
+      setSession(data.session);
+      setIsAuthorized(true);
+      fetchAdminData();
+    } catch (err: any) {
+      setInlineError(err.message || "Invalid admin credentials");
+    } finally {
+      setInlineLoading(false);
+    }
+  };
+
   if (!session) {
     return (
-      <div className="min-h-[100svh] bg-[#040507] flex flex-col items-center justify-center p-6 text-center select-none">
-        <Lock className="h-12 w-12 text-silver/40 mb-4" />
-        <h2 className="text-display text-2xl text-white">Admin Authentication Required</h2>
-        <p className="font-mono text-xs text-muted-foreground mt-2 max-w-sm">
-          Please log in with your authorized admin credentials to access the RAUSCH Control Center.
-        </p>
-        <a
-          href="/login"
-          className="mt-6 rounded-xl bg-white px-6 py-3 font-mono text-[11px] font-semibold uppercase tracking-[0.2em] text-black hover:bg-silver transition-all"
-        >
-          GO TO LOGIN →
-        </a>
+      <div className="min-h-[100svh] bg-[#040507] flex flex-col items-center justify-center p-6 select-none text-foreground">
+        <div className="w-full max-w-md rounded-3xl border border-white/15 bg-[#090b10] p-8 space-y-5 text-center">
+          <Lock className="h-10 w-10 text-silver/50 mx-auto" />
+          <div>
+            <h2 className="text-display text-2xl font-light text-white">Admin Operations Access</h2>
+            <p className="font-sans text-xs text-muted-foreground mt-1">
+              Enter your authorized admin credentials to unlock the control center.
+            </p>
+          </div>
+
+          {inlineError && (
+            <div className="p-3 rounded-xl bg-red-950/80 border border-red-800 text-red-200 font-mono text-xs text-left">
+              {inlineError}
+            </div>
+          )}
+
+          <form onSubmit={handleInlineLogin} className="space-y-3 font-mono text-xs text-left">
+            <div>
+              <label className="block text-[9px] uppercase tracking-wider text-muted-foreground mb-1">
+                Admin Email
+              </label>
+              <input
+                type="email"
+                required
+                placeholder="admin@rausch.night"
+                value={inlineEmail}
+                onChange={(e) => setInlineEmail(e.target.value)}
+                className="w-full rounded-xl border border-white/10 bg-zinc-900 px-4 py-3 text-white focus:outline-none focus:border-white/40"
+              />
+            </div>
+
+            <div>
+              <label className="block text-[9px] uppercase tracking-wider text-muted-foreground mb-1">
+                Password
+              </label>
+              <input
+                type="password"
+                required
+                placeholder="••••••••"
+                value={inlinePass}
+                onChange={(e) => setInlinePass(e.target.value)}
+                className="w-full rounded-xl border border-white/10 bg-zinc-900 px-4 py-3 text-white focus:outline-none focus:border-white/40"
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={inlineLoading}
+              className="w-full rounded-xl bg-white py-3.5 font-mono text-[10px] font-bold uppercase tracking-widest text-black hover:bg-zinc-200 transition-all cursor-pointer disabled:opacity-50 mt-4 flex items-center justify-center gap-2"
+            >
+              {inlineLoading ? (
+                <>
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  <span>Authenticating...</span>
+                </>
+              ) : (
+                <span>Unlock Control Center →</span>
+              )}
+            </button>
+          </form>
+
+          <div className="pt-2">
+            <a href="/" className="font-mono text-[10px] uppercase text-zinc-500 hover:text-white transition-colors">
+              ← Return to Experience
+            </a>
+          </div>
+        </div>
       </div>
     );
   }
