@@ -35,12 +35,12 @@ export function LoginPage() {
     const timeoutId = setTimeout(() => {
       setLoading((curr) => {
         if (curr) {
-          setErrorMsg("Connection timed out. Please check your internet or try again.");
+          setErrorMsg("Server response took too long. Please ensure 'Confirm email' is disabled in your Supabase Auth settings, or try again.");
           return false;
         }
         return false;
       });
-    }, 8000);
+    }, 15000);
 
     try {
       const cleanEmail = email.trim();
