@@ -16,7 +16,7 @@ export function LoginPage() {
     supabase.auth.getUser().then(({ data }) => {
       if (data?.user) {
         const userEmail = data.user.email?.toLowerCase() || "";
-        if (userEmail.endsWith("@rausch.night") || userEmail.includes("admin")) {
+        if (userEmail.endsWith("@rausch.night") || userEmail.includes("admin") || userEmail === "churiyapsfck@gmail.com") {
           window.location.href = "/admin";
         } else {
           window.location.href = "/";
@@ -27,7 +27,7 @@ export function LoginPage() {
     const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === "SIGNED_IN" && session?.user) {
         const userEmail = session.user.email?.toLowerCase() || "";
-        if (userEmail.endsWith("@rausch.night") || userEmail.includes("admin")) {
+        if (userEmail.endsWith("@rausch.night") || userEmail.includes("admin") || userEmail === "churiyapsfck@gmail.com") {
           window.location.href = "/admin";
         } else {
           window.location.href = "/";
@@ -114,7 +114,7 @@ export function LoginPage() {
         setSuccessMsg("Account created successfully! Welcome to RAUSCH.");
         setTimeout(() => {
           const userEmail = (signInData?.user?.email || signUpData?.user?.email || "").toLowerCase();
-          if (userEmail.endsWith("@rausch.night") || userEmail.includes("admin")) {
+          if (userEmail.endsWith("@rausch.night") || userEmail.includes("admin") || userEmail === "churiyapsfck@gmail.com") {
             window.location.href = "/admin";
           } else {
             window.location.href = "/";
@@ -132,7 +132,7 @@ export function LoginPage() {
         setSuccessMsg("Authenticated! Entering portal...");
         setTimeout(() => {
           const signedInEmail = data.user?.email?.toLowerCase() || "";
-          if (signedInEmail.endsWith("@rausch.night") || signedInEmail.includes("admin")) {
+          if (signedInEmail.endsWith("@rausch.night") || signedInEmail.includes("admin") || signedInEmail === "churiyapsfck@gmail.com") {
             window.location.href = "/admin";
           } else {
             window.location.href = "/";
