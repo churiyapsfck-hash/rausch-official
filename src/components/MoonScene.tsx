@@ -601,11 +601,22 @@ function RealMoon({ mobile }: { mobile: boolean }) {
     camera.position.z = THREE.MathUtils.damp(camera.position.z, targetCamZ, dampCam * 0.9, d);
     camera.lookAt(0, 0, 0);
 
+    const isIntroRausch = scrollState.introPhase === "rausch";
+    const isIntroMoon = scrollState.introPhase === "light_spin" || scrollState.introPhase === "moon_fade_in";
+
     // 4. Moon Group Transformations
     if (group.current) {
-      const targetGx = THREE.MathUtils.lerp(baseGx, passGx, blend);
-      const targetGy = THREE.MathUtils.lerp(baseGy, passGy, blend);
-      const targetScale = THREE.MathUtils.lerp(baseScale, passScale, blend);
+      let targetGx = THREE.MathUtils.lerp(baseGx, passGx, blend);
+      let targetGy = THREE.MathUtils.lerp(baseGy, passGy, blend);
+      let targetScale = THREE.MathUtils.lerp(baseScale, passScale, blend);
+
+      if (isIntroRausch) {
+        targetScale = 0;
+      } else if (isIntroMoon) {
+        targetGx = 0;
+        targetGy = 0;
+        targetScale = mobile ? 0.85 : 1.1;
+      }
 
       const targetGzRot = track(p, [
         [0, -0.12],
@@ -630,10 +641,19 @@ function RealMoon({ mobile }: { mobile: boolean }) {
 
     // 5. Directional Light (Sun)
     if (sunLight.current) {
-      const targetSunX = THREE.MathUtils.lerp(baseSunX, passLightX, blend) + ptrX * 1.5;
-      const targetSunY = THREE.MathUtils.lerp(baseSunY, passLightY, blend) - ptrY * 1.2;
-      const targetSunZ = THREE.MathUtils.lerp(baseSunZ, passLightZ, blend);
-      const targetSunIntensity = THREE.MathUtils.lerp(baseSunIntensity, passLightIntensity, blend);
+      let targetSunX = THREE.MathUtils.lerp(baseSunX, passLightX, blend) + ptrX * 1.5;
+      let targetSunY = THREE.MathUtils.lerp(baseSunY, passLightY, blend) - ptrY * 1.2;
+      let targetSunZ = THREE.MathUtils.lerp(baseSunZ, passLightZ, blend);
+      let targetSunIntensity = THREE.MathUtils.lerp(baseSunIntensity, passLightIntensity, blend);
+
+      if (isIntroRausch) {
+        targetSunIntensity = 0;
+      } else if (isIntroMoon) {
+        targetSunX = 2.5;
+        targetSunY = 0.5;
+        targetSunZ = 2.0;
+        targetSunIntensity = 8.5;
+      }
 
       sunLight.current.position.x = THREE.MathUtils.damp(
         sunLight.current.position.x,
