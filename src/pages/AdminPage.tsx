@@ -258,13 +258,7 @@ export function AdminPage() {
     return matchesStatus && matchesQuery;
   });
 
-  if (loading) {
-    return (
-      <div className="min-h-[100svh] bg-[#040507] flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-silver" />
-      </div>
-    );
-  }
+
 
   const [inlineEmail, setInlineEmail] = useState("");
   const [inlinePass, setInlinePass] = useState("");
