@@ -28,10 +28,10 @@ export const scrollState = {
   phase: "ENTERING" as PassPhase,
   isDragging: false,
   hasInteractedWithPasses: false,
-  introPhase: "pitch_black" as
+  introPhase: "done" as
     "pitch_black" | "moon_fade_in" | "light_spin" | "moon_fade_out" | "rausch" | "done",
-  introMoonOpacity: 0,
-  introAngle: -Math.PI / 2,
+  introMoonOpacity: 1,
+  introAngle: 0,
 };
 
 type Listener = (state: typeof scrollState) => void;
