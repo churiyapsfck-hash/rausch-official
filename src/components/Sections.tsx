@@ -16,14 +16,26 @@ export function Nav() {
   const [solid, setSolid] = useState(false);
   const [passesBlend, setPassesBlend] = useState(0);
   const [bookingTier, setBookingTier] = useState<PassTier | null>(null);
+  const [user, setUser] = useState<any>(null);
 
   useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      setUser(data?.user || null);
+    });
+
+    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user || null);
+    });
+
     const onScroll = () => {
       setSolid(window.scrollY > 50);
       setPassesBlend(scrollState.passesBlend);
     };
     window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
+    return () => {
+      authListener.subscription.unsubscribe();
+      window.removeEventListener("scroll", onScroll);
+    };
   }, []);
 
   const handleSelectTier = async (tier: PassTier) => {
@@ -34,6 +46,14 @@ export function Nav() {
     }
     setBookingTier(tier);
   };
+
+  const navLinks = [
+    ["Manifesto", "#manifesto"],
+    ["Passes", "#passes"],
+    ["Venue", "#venue"],
+    ["Rules", "#rules"],
+    [user ? "My Passes" : "Sign In", user ? "/purchases" : "/login"],
+  ];
 
   return (
     <>
@@ -58,13 +78,7 @@ export function Nav() {
           </a>
 
           <div className="hidden items-center gap-10 md:flex">
-            {[
-              ["Manifesto", "#manifesto"],
-              ["Passes", "#passes"],
-              ["Venue", "#venue"],
-              ["Rules", "#rules"],
-              ["My Passes", "/purchases"],
-            ].map(([label, href]) => (
+            {navLinks.map(([label, href]) => (
               <a
                 key={href}
                 href={href}
@@ -75,12 +89,12 @@ export function Nav() {
             ))}
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-4">
             <a
-              href="/purchases"
+              href={user ? "/purchases" : "/login"}
               className="hidden sm:inline-block font-mono text-[10px] uppercase tracking-[0.25em] text-silver hover:text-white transition-colors"
             >
-              My Passes
+              {user ? "My Passes" : "Sign In"}
             </a>
             <button
               onClick={() => handleSelectTier("general")}
