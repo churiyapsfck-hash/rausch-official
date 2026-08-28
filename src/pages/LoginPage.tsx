@@ -88,7 +88,7 @@ export function LoginPage() {
         // 3. Upsert profile record
         const activeUserId = signInData?.user?.id || signUpData?.user?.id;
         if (activeUserId) {
-          supabase
+          await supabase
             .from("profiles")
             .upsert({
               id: activeUserId,
@@ -96,9 +96,7 @@ export function LoginPage() {
               full_name: cleanName,
               phone: cleanPhone,
               email: cleanEmail,
-            })
-            .then(() => {})
-            .catch(() => {});
+            }, { onConflict: "id" });
         }
 
         if (signInErr && !signUpData?.session) {
