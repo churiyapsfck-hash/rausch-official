@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
-import { ArrowLeft, Loader2, Sparkles } from "lucide-react";
+import { ArrowLeft, Loader2 } from "lucide-react";
 
 export function LoginPage() {
   const [isSignUp, setIsSignUp] = useState(false);
@@ -31,6 +31,17 @@ export function LoginPage() {
     setSuccessMsg("");
     setLoading(true);
 
+    // Timeout safety to ensure button NEVER stays permanently stuck on processing
+    const timeoutId = setTimeout(() => {
+      setLoading((curr) => {
+        if (curr) {
+          setErrorMsg("Connection timed out. Please check your internet or try again.");
+          return false;
+        }
+        return false;
+      });
+    }, 8000);
+
     try {
       const cleanEmail = email.trim();
       const cleanPass = password;
@@ -44,7 +55,7 @@ export function LoginPage() {
         const cleanPhone = phone.trim();
 
         if (!cleanName || cleanPhone.length < 10) {
-          throw new Error("Please enter your full name and a valid 10-digit phone number");
+          throw new Error("Please enter your full name and a valid 10-digit mobile number");
         }
 
         const userCode = `RAU-${Math.random().toString(36).substring(2, 7).toUpperCase()}`;
@@ -64,28 +75,32 @@ export function LoginPage() {
 
         if (signUpErr) throw signUpErr;
 
-        // 2. Try immediate auto sign-in
+        // 2. Fire profile upsert asynchronously without blocking UI
+        const newUserId = signUpData?.user?.id;
+        if (newUserId) {
+          supabase
+            .from("profiles")
+            .upsert({
+              id: newUserId,
+              user_code: userCode,
+              full_name: cleanName,
+              phone: cleanPhone,
+              email: cleanEmail,
+            })
+            .then(() => {})
+            .catch(() => {});
+        }
+
+        // 3. Try immediate auto sign-in
         const { data: signInData, error: signInErr } = await supabase.auth.signInWithPassword({
           email: cleanEmail,
           password: cleanPass,
         });
 
-        // 3. Upsert profile record
-        const activeUserId = signInData?.user?.id || signUpData?.user?.id;
-        if (activeUserId) {
-          await supabase.from("profiles").upsert({
-            id: activeUserId,
-            user_code: userCode,
-            full_name: cleanName,
-            phone: cleanPhone,
-            email: cleanEmail,
-          }).catch((err) => {
-            console.warn("Profile creation note:", err);
-          });
-        }
+        clearTimeout(timeoutId);
 
         if (signInData?.session) {
-          setSuccessMsg("Account created successfully! Welcome to RAUSCH.");
+          setSuccessMsg("Account created! Redirecting to portal...");
           setTimeout(() => {
             const signedInEmail = signInData.user?.email?.toLowerCase() || "";
             if (signedInEmail.endsWith("@rausch.night") || signedInEmail.includes("admin")) {
@@ -93,9 +108,9 @@ export function LoginPage() {
             } else {
               window.location.href = "/purchases";
             }
-          }, 800);
+          }, 600);
         } else {
-          // Email confirmation is enabled in Supabase
+          // If email confirmation is required in Supabase project
           setSuccessMsg("Account created! Please check your email to verify your account, then sign in.");
           setIsSignUp(false);
           setLoading(false);
@@ -107,6 +122,8 @@ export function LoginPage() {
           password: cleanPass,
         });
 
+        clearTimeout(timeoutId);
+
         if (signInErr) throw signInErr;
 
         setSuccessMsg("Authenticated! Entering portal...");
@@ -117,12 +134,13 @@ export function LoginPage() {
           } else {
             window.location.href = "/purchases";
           }
-        }, 600);
+        }, 500);
       }
     } catch (err: any) {
+      clearTimeout(timeoutId);
       const raw = err?.message || err?.error_description || (typeof err === "string" ? err : "Authentication failed");
       const text = typeof raw === "object" ? JSON.stringify(raw) : String(raw);
-      setErrorMsg(text === "{}" ? "Invalid credentials. Please verify your email and password." : text);
+      setErrorMsg(text === "{}" ? "Invalid credentials. Please check your email and password." : text);
       setLoading(false);
     }
   };
