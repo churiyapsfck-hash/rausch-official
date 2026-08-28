@@ -19,7 +19,7 @@ export function LoginPage() {
         if (userEmail.endsWith("@rausch.night") || userEmail.includes("admin")) {
           window.location.href = "/admin";
         } else {
-          window.location.href = "/purchases";
+          window.location.href = "/";
         }
       }
     });
@@ -30,7 +30,7 @@ export function LoginPage() {
         if (userEmail.endsWith("@rausch.night") || userEmail.includes("admin")) {
           window.location.href = "/admin";
         } else {
-          window.location.href = "/purchases";
+          window.location.href = "/";
         }
       }
     });
@@ -117,7 +117,7 @@ export function LoginPage() {
           if (userEmail.endsWith("@rausch.night") || userEmail.includes("admin")) {
             window.location.href = "/admin";
           } else {
-            window.location.href = "/purchases";
+            window.location.href = "/";
           }
         }, 500);
       } else {
@@ -135,7 +135,7 @@ export function LoginPage() {
           if (signedInEmail.endsWith("@rausch.night") || signedInEmail.includes("admin")) {
             window.location.href = "/admin";
           } else {
-            window.location.href = "/purchases";
+            window.location.href = "/";
           }
         }, 400);
       }
