@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { supabase } from "@/lib/supabase";
 import { Reveal } from "./Reveal";
 import {
   scrollState,
@@ -24,6 +25,15 @@ export function Nav() {
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
+
+  const handleSelectTier = async (tier: PassTier) => {
+    const { data } = await supabase.auth.getUser();
+    if (!data?.user) {
+      window.location.href = "/login";
+      return;
+    }
+    setBookingTier(tier);
+  };
 
   return (
     <>
@@ -73,8 +83,8 @@ export function Nav() {
               My Passes
             </a>
             <button
-              onClick={() => setBookingTier("general")}
-              className="border border-white/20 px-6 py-2.5 font-mono text-[10px] uppercase tracking-[0.25em] text-foreground transition-all hover:bg-white hover:text-black"
+              onClick={() => handleSelectTier("general")}
+              className="border border-white/20 px-6 py-2.5 font-mono text-[10px] uppercase tracking-[0.25em] text-foreground transition-all hover:bg-white hover:text-black cursor-pointer"
             >
               Reserve Pass
             </button>
@@ -312,6 +322,15 @@ export function Passes() {
   const containerRef = useRef<HTMLDivElement>(null);
   const [bookingTier, setBookingTier] = useState<PassTier | null>(null);
 
+  const handleSelectTier = async (tier: PassTier) => {
+    const { data } = await supabase.auth.getUser();
+    if (!data?.user) {
+      window.location.href = "/login";
+      return;
+    }
+    setBookingTier(tier);
+  };
+
   useEffect(() => {
     const onScroll = () => {
       const el = containerRef.current;
@@ -367,7 +386,7 @@ export function Passes() {
               </div>
               <div className="mt-8 flex justify-end">
                 <button
-                  onClick={() => setBookingTier("general")}
+                  onClick={() => handleSelectTier("general")}
                   className="group inline-flex items-center gap-3 font-mono text-[10px] uppercase tracking-[0.35em] text-white hover:text-silver transition-colors cursor-pointer"
                 >
                   <span className="border-b border-white/40 group-hover:border-white pb-1 transition-colors">
@@ -401,7 +420,7 @@ export function Passes() {
               </div>
               <div className="mt-8 flex justify-start">
                 <button
-                  onClick={() => setBookingTier("vip")}
+                  onClick={() => handleSelectTier("vip")}
                   className="group inline-flex items-center gap-3 font-mono text-[10px] uppercase tracking-[0.35em] text-white hover:text-silver transition-colors cursor-pointer"
                 >
                   <span className="border-b border-white group-hover:border-silver pb-1 transition-colors font-semibold">
@@ -435,7 +454,7 @@ export function Passes() {
               </div>
               <div className="mt-8 flex justify-end">
                 <button
-                  onClick={() => setBookingTier("couple_general")}
+                  onClick={() => handleSelectTier("couple_general")}
                   className="group inline-flex items-center gap-3 font-mono text-[10px] uppercase tracking-[0.35em] text-white hover:text-silver transition-colors cursor-pointer"
                 >
                   <span className="border-b border-white/40 group-hover:border-white pb-1 transition-colors">
@@ -472,7 +491,7 @@ export function Passes() {
               </div>
               <div className="mt-10">
                 <button
-                  onClick={() => setBookingTier("couple_vip")}
+                  onClick={() => handleSelectTier("couple_vip")}
                   className="group inline-flex items-center gap-3 font-mono text-[10px] uppercase tracking-[0.35em] text-white hover:text-silver transition-colors cursor-pointer"
                 >
                   <span className="border-b border-white/60 group-hover:border-white pb-1 transition-colors">
