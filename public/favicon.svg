@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <rect width="64" height="64" rx="14" fill="#06070a"/>
+  <path d="M42.5 12C31.1782 12 22 21.1782 22 32.5C22 43.8218 31.1782 53 42.5 53C45.2891 53 47.9351 52.4439 50.3421 51.4428C40.6775 49.3364 33.375 40.7634 33.375 30.5C33.375 20.2366 40.6775 11.6636 50.3421 9.5572C47.9351 8.5561 45.2891 8 42.5 8" fill="url(#silverGradient)"/>
+  <defs>
+    <linearGradient id="silverGradient" x1="22" y1="8" x2="51" y2="53" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#ffffff"/>
+      <stop offset="0.45" stop-color="#e2e6f0"/>
+      <stop offset="0.8" stop-color="#9aa2b5"/>
+      <stop offset="1" stop-color="#cbd2e2"/>
+    </linearGradient>
+  </defs>
+</svg>
