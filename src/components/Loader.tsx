@@ -134,18 +134,10 @@ export function Loader({ onDone }: { onDone: () => void }) {
         }}
       >
         <div className="relative inline-block">
-          {/* Subtle Cosmic Glow Aura behind RAUSCH logo */}
-          <div
-            className="absolute -inset-8 md:-inset-12 -z-10 rounded-full opacity-70 blur-2xl md:blur-3xl pointer-events-none select-none"
-            style={{
-              background:
-                "radial-gradient(ellipse at center, rgba(220, 235, 255, 0.45) 0%, rgba(140, 180, 255, 0.20) 45%, rgba(0, 0, 0, 0) 75%)",
-            }}
-          />
           <img
             src="/images/rausch-logo.png"
             alt="RAUSCH"
-            className="relative z-10 w-[84vw] sm:w-[58vw] md:w-[44vw] max-w-[480px] h-auto object-contain select-none drop-shadow-[0_0_35px_rgba(220,235,255,0.35)]"
+            className="relative z-10 w-[84vw] sm:w-[58vw] md:w-[44vw] max-w-[480px] h-auto object-contain select-none"
           />
         </div>
 
