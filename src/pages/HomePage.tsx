@@ -1,4 +1,5 @@
 import { Suspense, useEffect, useState } from "react";
+import { Loader } from "@/components/Loader";
 import { Atmosphere } from "@/components/Atmosphere";
 import { SmoothScroll } from "@/components/SmoothScroll";
 import MoonScene from "@/components/MoonScene";
@@ -22,7 +23,9 @@ export function HomePage() {
   }, []);
 
   return (
-    <SmoothScroll>
+    <>
+      <Loader onDone={() => {}} />
+      <SmoothScroll>
       <Atmosphere />
 
       {mounted && (
@@ -47,5 +50,6 @@ export function HomePage() {
         <Footer />
       </div>
     </SmoothScroll>
+    </>
   );
 }
