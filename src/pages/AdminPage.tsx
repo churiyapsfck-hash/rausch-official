@@ -3,81 +3,92 @@ import { supabase } from "@/lib/supabase";
 import { PASS_PRICING } from "@/lib/upi";
 import {
   CheckCircle2,
-  XCircle,
+  Clock,
+  DollarSign,
+  Download,
   Eye,
+  ExternalLink,
+  Filter,
   Loader2,
+  Lock,
+  MessageSquare,
+  Plus,
   RefreshCw,
   Search,
+  Send,
+  ShieldCheck,
   Tag,
-  Shield,
-  FileText,
-  DollarSign,
+  Ticket,
+  Trash2,
   Users,
-  Lock,
-  ArrowLeft,
+  X,
+  XCircle,
 } from "lucide-react";
 
 export function AdminPage() {
   const [session, setSession] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
   const [isAuthorized, setIsAuthorized] = useState(false);
-  const [tab, setTab] = useState<"bookings" | "coupons" | "audit">("bookings");
+  const [loading, setLoading] = useState(true);
+  const [tab, setTab] = useState<"bookings" | "coupons" | "scanner">("bookings");
 
-  // Bookings state
+  // Bookings State
   const [bookings, setBookings] = useState<any[]>([]);
-  const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [searchQuery, setSearchQuery] = useState<string>("");
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
-  // Screenshot lightbox
+  // Modals / Overlays
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
+  const [whatsAppModal, setWhatsAppModal] = useState<{
+    isOpen: boolean;
+    type: "approval" | "decline";
+    booking: any;
+  }>({
+    isOpen: false,
+    type: "approval",
+    booking: null,
+  });
 
-  // Coupons state
+  // Coupons State
   const [coupons, setCoupons] = useState<any[]>([]);
   const [newCouponCode, setNewCouponCode] = useState("");
-  const [newCouponPercent, setNewCouponPercent] = useState(15);
+  const [newCouponPercent, setNewCouponPercent] = useState("10");
   const [newCouponPassType, setNewCouponPassType] = useState("all");
-  const [newCouponMaxUses, setNewCouponMaxUses] = useState<number | "">("");
+  const [newCouponMaxUses, setNewCouponMaxUses] = useState("");
   const [creatingCoupon, setCreatingCoupon] = useState(false);
   const [couponMsg, setCouponMsg] = useState("");
 
-  // Audit state
-  const [auditLogs, setAuditLogs] = useState<any[]>([]);
-
   const fetchAdminData = async () => {
     try {
-      const [bRes, cRes, aRes] = await Promise.all([
-        supabase.from("bookings").select("*").order("created_at", { ascending: false }),
-        supabase.from("coupons").select("*").order("created_at", { ascending: false }),
-        supabase.from("admin_audit_logs").select("*").order("created_at", { ascending: false }).limit(100),
-      ]);
+      const { data: bData } = await supabase
+        .from("bookings")
+        .select("*")
+        .order("created_at", { ascending: false });
 
-      setBookings(bRes.data || []);
-      setCoupons(cRes.data || []);
-      setAuditLogs(aRes.data || []);
+      if (bData) setBookings(bData);
+
+      const { data: cData } = await supabase
+        .from("coupons")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      if (cData) setCoupons(cData);
     } catch (err) {
-      console.error("Failed to load admin data:", err);
+      console.error(err);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    supabase.auth.getSession().then(async ({ data }) => {
-      const sess = data?.session;
+    supabase.auth.getSession().then(({ data: { session: sess } }) => {
+      setSession(sess);
       if (!sess) {
+        setIsAuthorized(false);
         setLoading(false);
         return;
       }
-      setSession(sess);
 
-      const { data: roles } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", sess.user.id);
-
-      const hasAdmin = roles?.some((r) => r.role === "admin" || r.role === "scanner");
-      // Allow access for authenticated session
       setIsAuthorized(true);
       fetchAdminData();
     });
@@ -96,15 +107,53 @@ export function AdminPage() {
     return () => authListener.subscription.unsubscribe();
   }, []);
 
-  const handleVerify = async (bookingId: string) => {
-    setActionLoading(bookingId);
+  const getApprovalWhatsAppLink = (booking: any) => {
+    if (!booking) return "";
+    const phone = booking.phone?.replace(/[^0-9]/g, "") || "";
+    const fullPhone = phone.length === 10 ? `91${phone}` : phone;
+    const passName = (booking.pass_type || "General").replace("_", " ").toUpperCase();
+    const token = booking.ticket_token || booking.purchase_id;
+    const passUrl = `${window.location.origin}/p/${token}`;
+
+    const message = `✦ *RAUSCH MMXXVI · CELESTIAL PASS APPROVED* ✦\n\nHi *${booking.full_name || "Attendee"}*,\nYour booking for *RAUSCH* (Hyderabad · TOS Club & Lounge) has been verified and confirmed!\n\n🎟️ *Pass Tier*: ${passName}\n🆔 *Purchase ID*: ${booking.purchase_id}\n💰 *Amount Paid*: ₹${booking.final_amount}\n\n📲 *View & Download Your Digital Pass with Gate QR Code*:\n${passUrl}\n\n⚠️ *Gate Entry Rules*:\n• Present this Digital QR Pass at the venue scanner gate\n• Stag entry rules apply • Age: 16-24 only • Non-transferable\n\nSee you under the lunar lights! 🌙\n— *RAUSCH HYDERABAD*`;
+
+    return `https://wa.me/${fullPhone}?text=${encodeURIComponent(message)}`;
+  };
+
+  const getDeclineWhatsAppLink = (booking: any) => {
+    if (!booking) return "";
+    const phone = booking.phone?.replace(/[^0-9]/g, "") || "";
+    const fullPhone = phone.length === 10 ? `91${phone}` : phone;
+    const passName = (booking.pass_type || "General").replace("_", " ").toUpperCase();
+
+    const message = `✦ *RAUSCH HYDERABAD · PAYMENT VERIFICATION UPDATE* ✦\n\nHi *${booking.full_name || "Attendee"}*,\nWe could not verify your payment for *RAUSCH* (${passName} · Ref: ${booking.purchase_id}).\n\n❌ *Reason*: The transaction reference (UTR) or screenshot provided could not be matched with bank merchant records.\n\n🔄 *Next Steps*:\nIf this was an error or you have a valid bank transaction reference, please log into https://rausch.ironoak.site or contact @rausch.hyd on Instagram with your bank debit proof for manual review.\n\n— *RAUSCH HYDERABAD*`;
+
+    return `https://wa.me/${fullPhone}?text=${encodeURIComponent(message)}`;
+  };
+
+  const handleVerify = async (booking: any) => {
+    setActionLoading(booking.id);
     try {
+      const generatedToken = booking.ticket_token || `TKT-${Math.random().toString(36).substring(2, 9).toUpperCase()}-${Date.now().toString(36).toUpperCase()}`;
+
       const { error } = await supabase
         .from("bookings")
-        .update({ status: "confirmed", updated_at: new Date().toISOString() })
-        .eq("id", bookingId);
+        .update({
+          status: "confirmed",
+          ticket_token: generatedToken,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", booking.id);
 
       if (error) throw error;
+
+      const updatedBooking = { ...booking, status: "confirmed", ticket_token: generatedToken };
+      setWhatsAppModal({
+        isOpen: true,
+        type: "approval",
+        booking: updatedBooking,
+      });
+
       fetchAdminData();
     } catch (err: any) {
       alert(err.message || "Failed to verify booking");
@@ -113,16 +162,24 @@ export function AdminPage() {
     }
   };
 
-  const handleDecline = async (bookingId: string) => {
+  const handleDecline = async (booking: any) => {
     if (!confirm("Are you sure you want to decline this booking?")) return;
-    setActionLoading(bookingId);
+    setActionLoading(booking.id);
     try {
       const { error } = await supabase
         .from("bookings")
         .update({ status: "declined", updated_at: new Date().toISOString() })
-        .eq("id", bookingId);
+        .eq("id", booking.id);
 
       if (error) throw error;
+
+      const updatedBooking = { ...booking, status: "declined" };
+      setWhatsAppModal({
+        isOpen: true,
+        type: "decline",
+        booking: updatedBooking,
+      });
+
       fetchAdminData();
     } catch (err: any) {
       alert(err.message || "Failed to decline booking");
@@ -243,149 +300,150 @@ export function AdminPage() {
             </div>
             <h1 className="text-display mt-2 text-3xl font-light text-white">Event Operations</h1>
             <p className="font-mono text-xs text-muted-foreground mt-0.5">
-              Live Ticketing, Gate Verification & Revenue Telemetry
+              Live Ticketing, Gate Verification & WhatsApp Dispatch
             </p>
           </div>
 
           <div className="flex items-center gap-3">
             <a
               href="/scan"
-              className="flex items-center gap-2 rounded-xl border border-purple-500/30 bg-purple-500/10 px-4 py-2.5 font-mono text-[10px] uppercase tracking-wider text-purple-300 hover:bg-purple-500/20 transition-colors"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 rounded-xl border border-silver/30 bg-silver/10 px-4 py-2.5 font-mono text-[10px] uppercase tracking-wider text-white hover:bg-silver/20 transition-all"
             >
-              <Shield className="h-3.5 w-3.5" />
-              <span>Gate Scanner</span>
+              <ShieldCheck className="h-3.5 w-3.5 text-silver" />
+              <span>Open Gate Scanner</span>
             </a>
             <button
-              onClick={fetchAdminData}
-              className="flex items-center gap-2 rounded-xl border border-white/15 bg-white/5 px-4 py-2.5 font-mono text-[10px] uppercase tracking-wider text-silver hover:bg-white/10 hover:text-white transition-colors cursor-pointer"
+              onClick={() => supabase.auth.signOut().then(() => (window.location.href = "/login"))}
+              className="rounded-xl border border-white/10 px-4 py-2.5 font-mono text-[10px] uppercase tracking-wider text-muted-foreground hover:text-white hover:border-white/30 transition-all cursor-pointer"
             >
-              <RefreshCw className="h-3.5 w-3.5" />
-              <span>Refresh</span>
+              Sign Out
             </button>
           </div>
         </div>
 
-        {/* Metrics Grid */}
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4 my-8">
-          <div className="rounded-2xl border border-white/10 bg-[#090b10] p-5 shadow-lg">
+        {/* Telemetry Cards */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 my-8">
+          <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-5 backdrop-blur-xl">
             <div className="flex items-center justify-between text-muted-foreground">
-              <span className="font-mono text-[10px] uppercase tracking-widest">Total Revenue</span>
+              <span className="font-mono text-[9px] uppercase tracking-widest">Total Revenue</span>
               <DollarSign className="h-4 w-4 text-emerald-400" />
             </div>
-            <div className="mt-3 font-mono text-2xl sm:text-3xl font-light text-white">
+            <div className="text-display mt-2 text-2xl sm:text-3xl font-light text-emerald-400">
               ₹{totalRevenue.toLocaleString()}
             </div>
-            <p className="font-mono text-[10px] text-emerald-400 mt-1">Confirmed & Checked-In</p>
+            <div className="font-mono text-[9px] text-muted-foreground mt-1">
+              From {verifiedBookings.length} confirmed passes
+            </div>
           </div>
 
-          <div className="rounded-2xl border border-white/10 bg-[#090b10] p-5 shadow-lg">
+          <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-5 backdrop-blur-xl">
             <div className="flex items-center justify-between text-muted-foreground">
-              <span className="font-mono text-[10px] uppercase tracking-widest">Verified Passes</span>
-              <Users className="h-4 w-4 text-blue-400" />
+              <span className="font-mono text-[9px] uppercase tracking-widest">Pending Review</span>
+              <Clock className="h-4 w-4 text-amber-400" />
             </div>
-            <div className="mt-3 font-mono text-2xl sm:text-3xl font-light text-white">
-              {verifiedBookings.length}
-            </div>
-            <p className="font-mono text-[10px] text-muted-foreground mt-1">Valid Entry Passes</p>
-          </div>
-
-          <div className="rounded-2xl border border-white/10 bg-[#090b10] p-5 shadow-lg">
-            <div className="flex items-center justify-between text-muted-foreground">
-              <span className="font-mono text-[10px] uppercase tracking-widest">Pending UTR</span>
-              <Shield className="h-4 w-4 text-amber-400" />
-            </div>
-            <div className="mt-3 font-mono text-2xl sm:text-3xl font-light text-amber-300">
+            <div className="text-display mt-2 text-2xl sm:text-3xl font-light text-amber-400">
               {pendingCount}
             </div>
-            <p className="font-mono text-[10px] text-amber-400/80 mt-1">Awaiting Review</p>
+            <div className="font-mono text-[9px] text-muted-foreground mt-1">Awaiting UTR audit</div>
           </div>
 
-          <div className="rounded-2xl border border-white/10 bg-[#090b10] p-5 shadow-lg">
+          <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-5 backdrop-blur-xl">
             <div className="flex items-center justify-between text-muted-foreground">
-              <span className="font-mono text-[10px] uppercase tracking-widest">Checked In</span>
-              <CheckCircle2 className="h-4 w-4 text-purple-400" />
+              <span className="font-mono text-[9px] uppercase tracking-widest">Checked In</span>
+              <Users className="h-4 w-4 text-purple-400" />
             </div>
-            <div className="mt-3 font-mono text-2xl sm:text-3xl font-light text-purple-300">
+            <div className="text-display mt-2 text-2xl sm:text-3xl font-light text-purple-400">
               {checkedInCount}
             </div>
-            <p className="font-mono text-[10px] text-purple-400/80 mt-1">Guests Inside Venue</p>
+            <div className="font-mono text-[9px] text-muted-foreground mt-1">Attendees admitted</div>
+          </div>
+
+          <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-5 backdrop-blur-xl">
+            <div className="flex items-center justify-between text-muted-foreground">
+              <span className="font-mono text-[9px] uppercase tracking-widest">Active Coupons</span>
+              <Tag className="h-4 w-4 text-silver" />
+            </div>
+            <div className="text-display mt-2 text-2xl sm:text-3xl font-light text-silver">
+              {coupons.filter((c) => c.active).length}
+            </div>
+            <div className="font-mono text-[9px] text-muted-foreground mt-1">Promotional discounts</div>
           </div>
         </div>
 
-        {/* Tab Switcher */}
-        <div className="flex items-center gap-2 border-b border-white/10 pb-4 mb-6 font-mono text-[11px] uppercase tracking-widest">
+        {/* Tab Navigation */}
+        <div className="flex border-b border-white/10 mb-6 font-mono text-xs uppercase tracking-widest">
           <button
             onClick={() => setTab("bookings")}
-            className={`flex items-center gap-2 rounded-xl px-4 py-2 transition-colors cursor-pointer ${
-              tab === "bookings" ? "bg-white text-black font-semibold" : "text-muted-foreground hover:text-white"
+            className={`pb-3 pr-6 transition-colors cursor-pointer ${
+              tab === "bookings" ? "border-b-2 border-white text-white font-bold" : "text-muted-foreground hover:text-white"
             }`}
           >
-            <Users className="h-3.5 w-3.5" />
-            <span>Bookings ({bookings.length})</span>
+            Pass Bookings ({bookings.length})
           </button>
           <button
             onClick={() => setTab("coupons")}
-            className={`flex items-center gap-2 rounded-xl px-4 py-2 transition-colors cursor-pointer ${
-              tab === "coupons" ? "bg-white text-black font-semibold" : "text-muted-foreground hover:text-white"
+            className={`pb-3 px-6 transition-colors cursor-pointer ${
+              tab === "coupons" ? "border-b-2 border-white text-white font-bold" : "text-muted-foreground hover:text-white"
             }`}
           >
-            <Tag className="h-3.5 w-3.5" />
-            <span>Coupons ({coupons.length})</span>
-          </button>
-          <button
-            onClick={() => setTab("audit")}
-            className={`flex items-center gap-2 rounded-xl px-4 py-2 transition-colors cursor-pointer ${
-              tab === "audit" ? "bg-white text-black font-semibold" : "text-muted-foreground hover:text-white"
-            }`}
-          >
-            <FileText className="h-3.5 w-3.5" />
-            <span>Audit Logs ({auditLogs.length})</span>
+            Promo Coupons ({coupons.length})
           </button>
         </div>
 
-        {/* Tab 1: Bookings */}
+        {/* Tab 1: Bookings Management */}
         {tab === "bookings" && (
-          <div className="space-y-6">
+          <div className="space-y-4">
+            {/* Filters Bar */}
             <div className="flex flex-col sm:flex-row gap-4 justify-between items-stretch sm:items-center">
               <div className="relative flex-1 max-w-md">
-                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
                 <input
                   type="text"
-                  placeholder="Search by name, phone, ref, UTR..."
+                  placeholder="Search guest name, phone, UTR or Ref ID..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full rounded-xl border border-white/15 bg-white/5 pl-10 pr-4 py-2.5 text-xs text-white placeholder-white/40 focus:border-silver focus:outline-none font-mono"
+                  className="w-full rounded-xl border border-white/10 bg-white/5 pl-9 pr-4 py-2.5 font-mono text-xs text-white placeholder:text-muted-foreground focus:outline-none focus:border-white/30"
                 />
               </div>
 
-              <div className="flex items-center gap-2 font-mono text-[10px]">
-                {["all", "pending", "confirmed", "checked_in", "declined"].map((st) => (
-                  <button
-                    key={st}
-                    onClick={() => setStatusFilter(st)}
-                    className={`rounded-lg px-3 py-1.5 uppercase tracking-wider transition-colors cursor-pointer ${
-                      statusFilter === st
-                        ? "bg-white/20 text-white font-semibold"
-                        : "bg-white/5 text-muted-foreground hover:text-white"
-                    }`}
-                  >
-                    {st.replace("_", " ")}
-                  </button>
-                ))}
+              <div className="flex items-center gap-2 font-mono text-xs">
+                <Filter className="h-3.5 w-3.5 text-muted-foreground" />
+                <select
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                  className="rounded-xl border border-white/10 bg-zinc-900 px-3 py-2 text-white focus:outline-none focus:border-white/30"
+                >
+                  <option value="all">All Statuses ({bookings.length})</option>
+                  <option value="pending">Pending Review ({pendingCount})</option>
+                  <option value="confirmed">Approved / Confirmed</option>
+                  <option value="checked_in">Checked In ({checkedInCount})</option>
+                  <option value="declined">Declined</option>
+                </select>
+
+                <button
+                  onClick={fetchAdminData}
+                  className="p-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-muted-foreground hover:text-white transition-colors cursor-pointer"
+                  title="Refresh table"
+                >
+                  <RefreshCw className="h-3.5 w-3.5" />
+                </button>
               </div>
             </div>
 
-            <div className="overflow-x-auto rounded-2xl border border-white/10 bg-[#090b10]">
+            {/* Bookings Table */}
+            <div className="rounded-2xl border border-white/10 bg-white/[0.01] overflow-x-auto">
               <table className="w-full text-left font-mono text-xs">
                 <thead className="border-b border-white/10 bg-white/5 text-[10px] uppercase tracking-wider text-muted-foreground">
                   <tr>
                     <th className="py-3 px-4">Ref ID</th>
-                    <th className="py-3 px-4">Guest</th>
+                    <th className="py-3 px-4">Guest Info</th>
                     <th className="py-3 px-4">Pass Tier</th>
                     <th className="py-3 px-4">Amount</th>
-                    <th className="py-3 px-4">UTR / Screenshot</th>
+                    <th className="py-3 px-4">UTR / Proof</th>
                     <th className="py-3 px-4">Status</th>
-                    <th className="py-3 px-4 text-right">Actions</th>
+                    <th className="py-3 px-4 text-right">Actions & WhatsApp</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/5">
@@ -431,38 +489,66 @@ export function AdminPage() {
                             <span
                               className={`rounded-full px-2 py-0.5 text-[9px] uppercase tracking-wider ${
                                 b.status === "checked_in"
-                                  ? "bg-purple-500/20 text-purple-300"
+                                  ? "bg-purple-500/20 text-purple-300 border border-purple-500/30"
                                   : b.status === "confirmed"
-                                  ? "bg-emerald-500/20 text-emerald-300"
+                                  ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"
                                   : b.status === "pending"
-                                  ? "bg-amber-500/20 text-amber-300"
-                                  : "bg-red-500/20 text-red-300"
+                                  ? "bg-amber-500/20 text-amber-300 border border-amber-500/30"
+                                  : "bg-red-500/20 text-red-300 border border-red-500/30"
                               }`}
                             >
                               {b.status}
                             </span>
                           </td>
                           <td className="py-3 px-4 text-right">
-                            {b.status === "pending" && (
-                              <div className="flex items-center justify-end gap-2">
-                                <button
-                                  onClick={() => handleVerify(b.id)}
-                                  disabled={actionLoading === b.id}
-                                  className="flex items-center gap-1 rounded-lg bg-emerald-500/20 px-2.5 py-1 text-[10px] font-semibold text-emerald-300 hover:bg-emerald-500/30 transition-colors cursor-pointer"
+                            <div className="flex items-center justify-end gap-2">
+                              {b.status === "pending" && (
+                                <>
+                                  <button
+                                    onClick={() => handleVerify(b)}
+                                    disabled={actionLoading === b.id}
+                                    className="flex items-center gap-1 rounded-lg bg-emerald-500/20 px-2.5 py-1 text-[10px] font-semibold text-emerald-300 hover:bg-emerald-500/30 transition-colors cursor-pointer"
+                                  >
+                                    <CheckCircle2 className="h-3 w-3" />
+                                    <span>Approve</span>
+                                  </button>
+                                  <button
+                                    onClick={() => handleDecline(b)}
+                                    disabled={actionLoading === b.id}
+                                    className="flex items-center gap-1 rounded-lg bg-red-500/20 px-2.5 py-1 text-[10px] font-semibold text-red-300 hover:bg-red-500/30 transition-colors cursor-pointer"
+                                  >
+                                    <XCircle className="h-3 w-3" />
+                                    <span>Decline</span>
+                                  </button>
+                                </>
+                              )}
+
+                              {(b.status === "confirmed" || b.status === "checked_in") && (
+                                <a
+                                  href={getApprovalWhatsAppLink(b)}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="flex items-center gap-1 rounded-lg bg-emerald-600/20 border border-emerald-500/30 px-2.5 py-1 text-[10px] font-semibold text-emerald-300 hover:bg-emerald-600/30 transition-colors"
+                                  title="Send pass & QR link on WhatsApp"
                                 >
-                                  <CheckCircle2 className="h-3 w-3" />
-                                  <span>Approve</span>
-                                </button>
-                                <button
-                                  onClick={() => handleDecline(b.id)}
-                                  disabled={actionLoading === b.id}
-                                  className="flex items-center gap-1 rounded-lg bg-red-500/20 px-2.5 py-1 text-[10px] font-semibold text-red-300 hover:bg-red-500/30 transition-colors cursor-pointer"
+                                  <Send className="h-3 w-3 text-emerald-400" />
+                                  <span>WhatsApp Pass</span>
+                                </a>
+                              )}
+
+                              {b.status === "declined" && (
+                                <a
+                                  href={getDeclineWhatsAppLink(b)}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="flex items-center gap-1 rounded-lg bg-red-600/20 border border-red-500/30 px-2.5 py-1 text-[10px] font-semibold text-red-300 hover:bg-red-600/30 transition-colors"
+                                  title="Send decline notice on WhatsApp"
                                 >
-                                  <XCircle className="h-3 w-3" />
-                                  <span>Decline</span>
-                                </button>
-                              </div>
-                            )}
+                                  <MessageSquare className="h-3 w-3 text-red-400" />
+                                  <span>WhatsApp Decline</span>
+                                </a>
+                              )}
+                            </div>
                           </td>
                         </tr>
                       );
@@ -474,176 +560,274 @@ export function AdminPage() {
           </div>
         )}
 
-        {/* Tab 2: Coupons */}
+        {/* Tab 2: Coupons Management */}
         {tab === "coupons" && (
           <div className="space-y-8">
             <form
               onSubmit={handleCreateCoupon}
-              className="rounded-2xl border border-white/10 bg-[#090b10] p-6 max-w-2xl space-y-4 font-mono text-xs"
+              className="rounded-2xl border border-white/10 bg-white/[0.02] p-6 max-w-2xl backdrop-blur-xl"
             >
-              <h3 className="text-display text-lg text-white">Mint New Promo Code</h3>
+              <h3 className="text-display text-xl text-white mb-4">Create Promo Coupon</h3>
+
               {couponMsg && (
-                <div className="rounded-lg bg-white/10 p-2.5 text-silver text-[11px]">{couponMsg}</div>
+                <div
+                  className={`mb-4 p-3 rounded-lg text-xs font-mono ${
+                    couponMsg.startsWith("Error") ? "bg-red-500/20 text-red-300" : "bg-emerald-500/20 text-emerald-300"
+                  }`}
+                >
+                  {couponMsg}
+                </div>
               )}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 font-mono text-xs">
                 <div>
-                  <label className="text-[10px] text-muted-foreground block mb-1">CODE</label>
+                  <label className="block text-muted-foreground uppercase text-[9px] tracking-wider mb-1">
+                    Coupon Code
+                  </label>
                   <input
                     type="text"
                     required
-                    placeholder="VIP20"
+                    placeholder="e.g. VIP20 or HYDSECRET"
                     value={newCouponCode}
-                    onChange={(e) => setNewCouponCode(e.target.value.toUpperCase())}
-                    className="w-full rounded-lg border border-white/15 bg-white/5 px-3 py-2 text-white"
+                    onChange={(e) => setNewCouponCode(e.target.value)}
+                    className="w-full rounded-xl border border-white/10 bg-zinc-900 px-4 py-2.5 text-white uppercase focus:outline-none focus:border-white/30"
                   />
                 </div>
+
                 <div>
-                  <label className="text-[10px] text-muted-foreground block mb-1">DISCOUNT %</label>
-                  <input
-                    type="number"
-                    required
-                    min="1"
-                    max="100"
+                  <label className="block text-muted-foreground uppercase text-[9px] tracking-wider mb-1">
+                    Discount Percentage (%)
+                  </label>
+                  <select
                     value={newCouponPercent}
-                    onChange={(e) => setNewCouponPercent(Number(e.target.value))}
-                    className="w-full rounded-lg border border-white/15 bg-white/5 px-3 py-2 text-white"
-                  />
+                    onChange={(e) => setNewCouponPercent(e.target.value)}
+                    className="w-full rounded-xl border border-white/10 bg-zinc-900 px-4 py-2.5 text-white focus:outline-none focus:border-white/30"
+                  >
+                    <option value="5">5% OFF</option>
+                    <option value="10">10% OFF</option>
+                    <option value="15">15% OFF</option>
+                    <option value="20">20% OFF</option>
+                    <option value="25">25% OFF</option>
+                    <option value="30">30% OFF</option>
+                    <option value="50">50% OFF</option>
+                  </select>
                 </div>
+
                 <div>
-                  <label className="text-[10px] text-muted-foreground block mb-1">PASS TIER</label>
+                  <label className="block text-muted-foreground uppercase text-[9px] tracking-wider mb-1">
+                    Applies To Pass
+                  </label>
                   <select
                     value={newCouponPassType}
                     onChange={(e) => setNewCouponPassType(e.target.value)}
-                    className="w-full rounded-lg border border-white/15 bg-[#0e1118] px-3 py-2 text-white"
+                    className="w-full rounded-xl border border-white/10 bg-zinc-900 px-4 py-2.5 text-white focus:outline-none focus:border-white/30"
                   >
-                    <option value="all">ALL PASSES</option>
-                    <option value="general">GENERAL</option>
-                    <option value="vip">VIP</option>
-                    <option value="couple_general">COUPLE GENERAL</option>
-                    <option value="couple_vip">COUPLE VIP</option>
+                    <option value="all">All Pass Tiers</option>
+                    <option value="general">General Only</option>
+                    <option value="vip">VIP Only</option>
+                    <option value="couple_general">Couple General Only</option>
+                    <option value="couple_vip">Couple VIP Only</option>
                   </select>
                 </div>
+
                 <div>
-                  <label className="text-[10px] text-muted-foreground block mb-1">MAX USES</label>
+                  <label className="block text-muted-foreground uppercase text-[9px] tracking-wider mb-1">
+                    Max Redemptions (Optional)
+                  </label>
                   <input
                     type="number"
+                    min="1"
                     placeholder="Unlimited"
                     value={newCouponMaxUses}
-                    onChange={(e) =>
-                      setNewCouponMaxUses(e.target.value === "" ? "" : Number(e.target.value))
-                    }
-                    className="w-full rounded-lg border border-white/15 bg-white/5 px-3 py-2 text-white"
+                    onChange={(e) => setNewCouponMaxUses(e.target.value)}
+                    className="w-full rounded-xl border border-white/10 bg-zinc-900 px-4 py-2.5 text-white focus:outline-none focus:border-white/30"
                   />
                 </div>
               </div>
+
               <button
                 type="submit"
                 disabled={creatingCoupon}
-                className="rounded-xl bg-white px-6 py-2.5 font-mono text-[10px] font-semibold uppercase tracking-wider text-black hover:bg-silver transition-all cursor-pointer"
+                className="mt-6 flex items-center gap-2 rounded-xl bg-white px-6 py-3 font-mono text-[10px] font-bold uppercase tracking-[0.2em] text-black hover:bg-zinc-200 transition-all cursor-pointer disabled:opacity-50"
               >
-                {creatingCoupon ? "MINTING..." : "+ CREATE COUPON"}
+                {creatingCoupon ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+                <span>Mint Promo Coupon</span>
               </button>
             </form>
 
-            <div className="overflow-x-auto rounded-2xl border border-white/10 bg-[#090b10]">
+            {/* Coupons List */}
+            <div className="rounded-2xl border border-white/10 bg-white/[0.01] overflow-x-auto">
               <table className="w-full text-left font-mono text-xs">
                 <thead className="border-b border-white/10 bg-white/5 text-[10px] uppercase tracking-wider text-muted-foreground">
                   <tr>
-                    <th className="py-3 px-4">Coupon Code</th>
+                    <th className="py-3 px-4">Code</th>
                     <th className="py-3 px-4">Discount</th>
-                    <th className="py-3 px-4">Applies To</th>
-                    <th className="py-3 px-4">Uses</th>
-                    <th className="py-3 px-4">Status</th>
-                    <th className="py-3 px-4 text-right">Actions</th>
+                    <th className="py-3 px-4">Tier Limit</th>
+                    <th className="py-3 px-4">Usage</th>
+                    <th className="py-3 px-4">Active</th>
+                    <th className="py-3 px-4 text-right">Delete</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/5">
-                  {coupons.map((c) => (
-                    <tr key={c.id}>
-                      <td className="py-3 px-4 text-white font-semibold">{c.code}</td>
-                      <td className="py-3 px-4 text-emerald-400 font-semibold">{c.percent_off}% OFF</td>
-                      <td className="py-3 px-4 uppercase text-silver">{c.pass_type}</td>
-                      <td className="py-3 px-4">
-                        {c.uses_count || 0} / {c.max_uses ?? "∞"}
-                      </td>
-                      <td className="py-3 px-4">
-                        <span
-                          className={`rounded-full px-2 py-0.5 text-[9px] ${
-                            c.active ? "bg-emerald-500/20 text-emerald-300" : "bg-zinc-500/20 text-zinc-400"
-                          }`}
-                        >
-                          {c.active ? "ACTIVE" : "PAUSED"}
-                        </span>
-                      </td>
-                      <td className="py-3 px-4 text-right space-x-2">
-                        <button
-                          onClick={() => handleToggleCoupon(c.id, c.active)}
-                          className="text-[10px] text-silver hover:text-white cursor-pointer"
-                        >
-                          {c.active ? "Pause" : "Activate"}
-                        </button>
-                        <button
-                          onClick={() => handleDeleteCoupon(c.id)}
-                          className="text-[10px] text-red-400 hover:text-red-300 cursor-pointer"
-                        >
-                          Delete
-                        </button>
+                  {coupons.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="py-8 text-center text-muted-foreground">
+                        No active coupons minted yet
                       </td>
                     </tr>
-                  ))}
+                  ) : (
+                    coupons.map((c) => (
+                      <tr key={c.id} className="hover:bg-white/[0.02] transition-colors">
+                        <td className="py-3 px-4 text-white font-bold">{c.code}</td>
+                        <td className="py-3 px-4 text-emerald-400 font-semibold">{c.percent_off}% OFF</td>
+                        <td className="py-3 px-4 text-silver uppercase">{c.pass_type}</td>
+                        <td className="py-3 px-4 text-muted-foreground">
+                          {c.uses_count} {c.max_uses ? `/ ${c.max_uses}` : "uses"}
+                        </td>
+                        <td className="py-3 px-4">
+                          <button
+                            onClick={() => handleToggleCoupon(c.id, c.active)}
+                            className={`rounded-full px-2.5 py-0.5 text-[9px] uppercase cursor-pointer ${
+                              c.active ? "bg-emerald-500/20 text-emerald-300" : "bg-zinc-800 text-zinc-500"
+                            }`}
+                          >
+                            {c.active ? "Active" : "Disabled"}
+                          </button>
+                        </td>
+                        <td className="py-3 px-4 text-right">
+                          <button
+                            onClick={() => handleDeleteCoupon(c.id)}
+                            className="p-1 text-red-400 hover:text-red-300 transition-colors cursor-pointer"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>
           </div>
         )}
+      </div>
 
-        {/* Tab 3: Audit Logs */}
-        {tab === "audit" && (
-          <div className="overflow-x-auto rounded-2xl border border-white/10 bg-[#090b10]">
-            <table className="w-full text-left font-mono text-xs">
-              <thead className="border-b border-white/10 bg-white/5 text-[10px] uppercase tracking-wider text-muted-foreground">
-                <tr>
-                  <th className="py-3 px-4">Timestamp</th>
-                  <th className="py-3 px-4">Admin / Operator</th>
-                  <th className="py-3 px-4">Action</th>
-                  <th className="py-3 px-4">Target Ref</th>
-                  <th className="py-3 px-4">Details</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-white/5">
-                {auditLogs.map((log) => (
-                  <tr key={log.id}>
-                    <td className="py-3 px-4 text-muted-foreground text-[10px]">
-                      {new Date(log.created_at).toLocaleString()}
-                    </td>
-                    <td className="py-3 px-4 text-silver">{log.admin_email}</td>
-                    <td className="py-3 px-4 text-white font-semibold">{log.action_type}</td>
-                    <td className="py-3 px-4 text-silver">{log.target_id}</td>
-                    <td className="py-3 px-4 text-muted-foreground">{log.details}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+      {/* Screenshot Lightbox Modal */}
+      {lightboxUrl && (
+        <div
+          className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4"
+          onClick={() => setLightboxUrl(null)}
+        >
+          <div className="relative max-w-2xl w-full max-h-[90vh] flex flex-col items-center">
+            <button
+              onClick={() => setLightboxUrl(null)}
+              className="absolute -top-10 right-0 p-2 text-white hover:text-silver cursor-pointer"
+            >
+              <X className="h-6 w-6" />
+            </button>
+            <img
+              src={lightboxUrl}
+              alt="Payment Screenshot Proof"
+              className="max-h-[85vh] w-auto rounded-xl object-contain border border-white/20 shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            />
           </div>
-        )}
+        </div>
+      )}
 
-        {/* Screenshot Lightbox Modal */}
-        {lightboxUrl && (
-          <div
-            onClick={() => setLightboxUrl(null)}
-            className="fixed inset-0 z-[999] flex items-center justify-center bg-black/90 p-4 cursor-pointer"
-          >
-            <div className="relative max-w-2xl max-h-[90vh]">
-              <img
-                src={lightboxUrl}
-                alt="Payment Screenshot Proof"
-                className="max-h-[85vh] w-auto rounded-2xl border border-white/20 object-contain"
-              />
-              <p className="text-center font-mono text-xs text-silver mt-2">Click anywhere to close</p>
+      {/* Action Notification Modal with 1-Click WhatsApp Trigger */}
+      {whatsAppModal.isOpen && whatsAppModal.booking && (
+        <div className="fixed inset-0 z-50 bg-black/85 flex items-center justify-center p-4 select-none backdrop-blur-md">
+          <div className="relative w-full max-w-md bg-zinc-950 border border-zinc-800 p-6 rounded-2xl shadow-2xl space-y-5">
+            <button
+              onClick={() => setWhatsAppModal({ isOpen: false, type: "approval", booking: null })}
+              className="absolute top-4 right-4 text-zinc-500 hover:text-white cursor-pointer"
+            >
+              <X className="h-5 w-5" />
+            </button>
+
+            <div className="text-center space-y-2">
+              <div
+                className={`inline-flex items-center justify-center w-12 h-12 rounded-full mx-auto ${
+                  whatsAppModal.type === "approval"
+                    ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/30"
+                    : "bg-red-500/10 text-red-400 border border-red-500/30"
+                }`}
+              >
+                {whatsAppModal.type === "approval" ? (
+                  <CheckCircle2 className="h-6 w-6" />
+                ) : (
+                  <XCircle className="h-6 w-6" />
+                )}
+              </div>
+              <h3 className="text-lg font-serif text-white">
+                {whatsAppModal.type === "approval" ? "Pass Verified & Approved!" : "Booking Marked Declined"}
+              </h3>
+              <p className="font-mono text-xs text-zinc-400">
+                {whatsAppModal.type === "approval"
+                  ? `Guest ${whatsAppModal.booking.full_name} is confirmed. Dispatch their digital QR pass on WhatsApp:`
+                  : `Guest ${whatsAppModal.booking.full_name} has been declined. Notify them on WhatsApp:`}
+              </p>
+            </div>
+
+            <div className="bg-zinc-900/80 border border-zinc-800 rounded-xl p-3 font-mono text-[11px] space-y-1.5 text-zinc-300">
+              <div className="flex justify-between">
+                <span className="text-zinc-500">GUEST:</span>
+                <span className="text-white font-semibold">{whatsAppModal.booking.full_name}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-zinc-500">PHONE:</span>
+                <span className="text-emerald-400">{whatsAppModal.booking.phone}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-zinc-500">REF ID:</span>
+                <span>{whatsAppModal.booking.purchase_id}</span>
+              </div>
+              {whatsAppModal.type === "approval" && (
+                <div className="flex justify-between border-t border-zinc-800 pt-1.5 mt-1.5">
+                  <span className="text-zinc-500">PASS QR LINK:</span>
+                  <span className="text-silver truncate max-w-[200px]">
+                    /p/{whatsAppModal.booking.ticket_token || whatsAppModal.booking.purchase_id}
+                  </span>
+                </div>
+              )}
+            </div>
+
+            <div className="space-y-2 pt-2">
+              <a
+                href={
+                  whatsAppModal.type === "approval"
+                    ? getApprovalWhatsAppLink(whatsAppModal.booking)
+                    : getDeclineWhatsAppLink(whatsAppModal.booking)
+                }
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => setWhatsAppModal({ isOpen: false, type: "approval", booking: null })}
+                className={`w-full py-3.5 rounded-xl font-mono text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg transition-all cursor-pointer ${
+                  whatsAppModal.type === "approval"
+                    ? "bg-emerald-500 hover:bg-emerald-400 text-black"
+                    : "bg-red-600 hover:bg-red-500 text-white"
+                }`}
+              >
+                <Send className="h-4 w-4" />
+                <span>
+                  {whatsAppModal.type === "approval"
+                    ? "📲 Send WhatsApp Pass with QR Code →"
+                    : "📲 Send WhatsApp Decline Notice →"}
+                </span>
+              </a>
+
+              <button
+                type="button"
+                onClick={() => setWhatsAppModal({ isOpen: false, type: "approval", booking: null })}
+                className="w-full py-2.5 font-mono text-[10px] uppercase text-zinc-500 hover:text-zinc-300 transition-colors cursor-pointer text-center"
+              >
+                Skip Notification
+              </button>
             </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }
