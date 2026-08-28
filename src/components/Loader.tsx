@@ -124,7 +124,7 @@ export function Loader({ onDone }: { onDone: () => void }) {
         />
       )}
 
-      {/* RAUSCH Title - Silky Smooth Cinema Fade-In */}
+      {/* RAUSCH Title - Silky Smooth Cinema Fade-In with Cosmic Glow */}
       <div
         className="relative z-10 flex flex-col items-center justify-center px-6 transition-all duration-[800ms]"
         style={{
@@ -133,11 +133,21 @@ export function Loader({ onDone }: { onDone: () => void }) {
           transform: isRauschVisible ? "scale(1)" : "scale(0.96)",
         }}
       >
-        <img
-          src="/images/rausch-logo.png"
-          alt="RAUSCH"
-          className="w-[84vw] sm:w-[58vw] md:w-[44vw] max-w-[480px] h-auto object-contain select-none"
-        />
+        <div className="relative inline-block">
+          {/* Subtle Cosmic Glow Aura behind RAUSCH logo */}
+          <div
+            className="absolute -inset-8 md:-inset-12 -z-10 rounded-full opacity-70 blur-2xl md:blur-3xl pointer-events-none select-none"
+            style={{
+              background:
+                "radial-gradient(ellipse at center, rgba(220, 235, 255, 0.45) 0%, rgba(140, 180, 255, 0.20) 45%, rgba(0, 0, 0, 0) 75%)",
+            }}
+          />
+          <img
+            src="/images/rausch-logo.png"
+            alt="RAUSCH"
+            className="relative z-10 w-[84vw] sm:w-[58vw] md:w-[44vw] max-w-[480px] h-auto object-contain select-none drop-shadow-[0_0_35px_rgba(220,235,255,0.35)]"
+          />
+        </div>
 
         <div
           className="mt-8 font-mono text-[9px] uppercase tracking-[0.45em] text-silver/60 transition-opacity duration-[1000ms] delay-150"
