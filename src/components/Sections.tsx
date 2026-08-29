@@ -181,9 +181,7 @@ export function Hero() {
           <span className="h-px w-10 bg-silver/40" />
         </div>
 
-        <span className="font-mono text-[9px] uppercase tracking-[0.3em] text-muted-foreground/80">
-          General ₹1,199 · VIP ₹1,699 · Couple General ₹2,299 · Couple VIP ₹3,299
-        </span>
+        <span />
       </div>
     </section>
   );

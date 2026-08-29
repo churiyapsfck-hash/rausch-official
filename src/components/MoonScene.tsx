@@ -24,14 +24,14 @@ function CustomMoonModel({
     scene.traverse((child) => {
       if ((child as THREE.Mesh).isMesh) {
         const m = child as THREE.Mesh;
-        m.castShadow = true;
-        m.receiveShadow = true;
+        m.castShadow = !mobile;
+        m.receiveShadow = !mobile;
         if (m.material) {
           const mat = m.material as THREE.MeshStandardMaterial;
           mat.roughness = 0.96;
           mat.metalness = 0.0;
           if (mat.map) {
-            mat.map.anisotropy = 8;
+            mat.map.anisotropy = mobile ? 1 : 4;
             mat.bumpMap = mat.map;
             mat.bumpScale = 0.085;
           }
@@ -56,7 +56,7 @@ function CosmicStarfield({ mobile }: { mobile: boolean }) {
   const dustRef = useRef<THREE.Points>(null);
 
   const [starPositions, starColors, starSizes, starPhases] = useMemo(() => {
-    const count = mobile ? 500 : 1600;
+    const count = mobile ? 80 : 1600;
     const pos = new Float32Array(count * 3);
     const col = new Float32Array(count * 3);
     const sz = new Float32Array(count);
@@ -93,7 +93,7 @@ function CosmicStarfield({ mobile }: { mobile: boolean }) {
   }, [mobile]);
 
   const [dustPositions, dustColors] = useMemo(() => {
-    const count = mobile ? 120 : 400;
+    const count = mobile ? 20 : 400;
     const pos = new Float32Array(count * 3);
     const col = new Float32Array(count * 3);
 
@@ -750,11 +750,12 @@ export default function MoonScene() {
 
   return (
     <Canvas
-      dpr={mobile ? [1, 1.4] : [1, 1.8]}
+      dpr={mobile ? 1 : [1, 1.5]}
       gl={{
         antialias: !mobile,
         alpha: true,
         powerPreference: "high-performance",
+        precision: mobile ? "mediump" : "highp",
       }}
       camera={{ position: [0, 0, 4.2], fov: 40 }}
       style={{ pointerEvents: "none" }}

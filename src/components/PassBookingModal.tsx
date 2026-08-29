@@ -160,7 +160,6 @@ export function PassBookingModal({ isOpen, onClose, initialTier = "general" }: P
           status: "pending",
           coupon_code: appliedCoupon || null,
           discount_percent: discountPercent,
-          discount_amount: Math.round(basePrice * (discountPercent / 100)),
           final_amount: finalPrice,
         })
         .select()
