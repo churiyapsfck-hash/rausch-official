@@ -24,14 +24,14 @@ function CustomMoonModel({
     scene.traverse((child) => {
       if ((child as THREE.Mesh).isMesh) {
         const m = child as THREE.Mesh;
-        m.castShadow = !mobile;
-        m.receiveShadow = !mobile;
+        m.castShadow = true;
+        m.receiveShadow = true;
         if (m.material) {
           const mat = m.material as THREE.MeshStandardMaterial;
           mat.roughness = 0.96;
           mat.metalness = 0.0;
           if (mat.map) {
-            mat.map.anisotropy = mobile ? 1 : 4;
+            mat.map.anisotropy = 8;
             mat.bumpMap = mat.map;
             mat.bumpScale = 0.085;
           }
@@ -750,12 +750,11 @@ export default function MoonScene() {
 
   return (
     <Canvas
-      dpr={mobile ? 1 : [1, 1.5]}
+      dpr={[1, 2]}
       gl={{
-        antialias: !mobile,
+        antialias: true,
         alpha: true,
         powerPreference: "high-performance",
-        precision: mobile ? "mediump" : "highp",
       }}
       camera={{ position: [0, 0, 4.2], fov: 40 }}
       style={{ pointerEvents: "none" }}
