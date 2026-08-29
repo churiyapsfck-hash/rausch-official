@@ -9,15 +9,38 @@ export function SmoothScroll({ children }: { children: React.ReactNode }) {
     let lenis: Lenis | null = null;
     let raf = 0;
 
+    const onScroll = () => readScroll();
+
     if (isTouch || reduced) {
       // 100% native buttery 120Hz hardware scrolling on iOS / Android
-      const onScroll = () => readScroll();
       window.addEventListener("scroll", onScroll, { passive: true });
+      window.addEventListener("resize", onScroll, { passive: true });
+      window.addEventListener("touchmove", onScroll, { passive: true });
       readScroll();
-      return () => window.removeEventListener("scroll", onScroll);
+
+      // Subtle gyro tilt parallax for mobile devices
+      const onOrientation = (e: DeviceOrientationEvent) => {
+        if (e.gamma !== null && e.beta !== null) {
+          const targetX = Math.max(-1, Math.min(1, e.gamma / 30));
+          const targetY = Math.max(-1, Math.min(1, (e.beta - 45) / 35));
+          scrollState.pointerX += (targetX - scrollState.pointerX) * 0.1;
+          scrollState.pointerY += (targetY - scrollState.pointerY) * 0.1;
+        }
+      };
+
+      if (window.DeviceOrientationEvent && typeof window.DeviceOrientationEvent.requestPermission !== "function") {
+        window.addEventListener("deviceorientation", onOrientation, { passive: true });
+      }
+
+      return () => {
+        window.removeEventListener("scroll", onScroll);
+        window.removeEventListener("resize", onScroll);
+        window.removeEventListener("touchmove", onScroll);
+        window.removeEventListener("deviceorientation", onOrientation);
+      };
     }
 
-    // Smooth inertia scroll for desktop mouse wheels only
+    // Smooth inertia scroll for desktop mouse wheels
     lenis = new Lenis({
       duration: 1.1,
       lerp: 0.09,
