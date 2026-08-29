@@ -40,8 +40,8 @@ export function Reveal({ children, delay = 0, y = 28, className = "", as = "div"
       style={{
         opacity: shown ? 1 : 0,
         transform: shown ? "translate3d(0,0,0)" : `translate3d(0,${y}px,0)`,
-        filter: shown ? "blur(0px)" : "blur(10px)",
-        transition: `opacity 1100ms var(--ease-cinema) ${delay}ms, transform 1200ms var(--ease-cinema) ${delay}ms, filter 1100ms var(--ease-cinema) ${delay}ms`,
+        willChange: "opacity, transform",
+        transition: `opacity 900ms var(--ease-cinema) ${delay}ms, transform 1000ms var(--ease-cinema) ${delay}ms`,
       }}
     >
       {children}

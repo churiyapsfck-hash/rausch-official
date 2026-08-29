@@ -31,6 +31,7 @@ export function Atmosphere() {
   }, []);
 
   useEffect(() => {
+    if (mobile) return; // Save 100% GPU/CPU on mobile — 3D scene provides starfield
     const el = canvas.current;
     if (!el) return;
     const ctx = el.getContext("2d", { alpha: true });
