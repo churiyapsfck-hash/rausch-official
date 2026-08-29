@@ -6,12 +6,13 @@ import { scrollState, setMoonLoadedState } from "@/lib/rausch-scroll";
 
 useGLTF.preload("/models/moon.glb");
 
+/**
+ * Exact Original 3D Moon Model - Untampered Native Shading & Textures
+ */
 function CustomMoonModel({
   innerRef,
-  mobile,
 }: {
   innerRef: React.RefObject<THREE.Group | null>;
-  mobile: boolean;
 }) {
   const gltf = useGLTF("/models/moon.glb");
 
@@ -19,31 +20,9 @@ function CustomMoonModel({
     setMoonLoadedState(true, 100);
   }, []);
 
-  const model = useMemo(() => {
-    const scene = gltf.scene.clone(true);
-    scene.traverse((child) => {
-      if ((child as THREE.Mesh).isMesh) {
-        const m = child as THREE.Mesh;
-        m.castShadow = !mobile;
-        m.receiveShadow = !mobile;
-        if (m.material) {
-          const mat = m.material as THREE.MeshStandardMaterial;
-          mat.roughness = 0.96;
-          mat.metalness = 0.0;
-          if (mat.map) {
-            mat.map.anisotropy = mobile ? 2 : 4;
-            mat.bumpMap = mat.map;
-            mat.bumpScale = 0.085;
-          }
-        }
-      }
-    });
-    return scene;
-  }, [gltf, mobile]);
-
   return (
     <group ref={innerRef} scale={1.0 / 1.271864}>
-      <primitive object={model} />
+      <primitive object={gltf.scene} />
     </group>
   );
 }
@@ -53,14 +32,11 @@ function CustomMoonModel({
  */
 function CosmicStarfield({ mobile }: { mobile: boolean }) {
   const pointsRef = useRef<THREE.Points>(null);
-  const dustRef = useRef<THREE.Points>(null);
 
-  const [starPositions, starColors, starSizes, starPhases] = useMemo(() => {
-    const count = mobile ? 70 : 1800;
+  const [starPositions, starColors] = useMemo(() => {
+    const count = mobile ? 50 : 1200;
     const pos = new Float32Array(count * 3);
     const col = new Float32Array(count * 3);
-    const sz = new Float32Array(count);
-    const ph = new Float32Array(count);
 
     const colors = [
       new THREE.Color("#ffffff"),
@@ -79,34 +55,13 @@ function CosmicStarfield({ mobile }: { mobile: boolean }) {
       col[i * 3] = c.r;
       col[i * 3 + 1] = c.g;
       col[i * 3 + 2] = c.b;
-
-      sz[i] = Math.random() < 0.15 ? 2.0 + Math.random() * 1.8 : 0.9 + Math.random() * 1.1;
-      ph[i] = Math.random() * Math.PI * 2;
-    }
-
-    return [pos, col, sz, ph];
-  }, [mobile]);
-
-  const [dustPositions, dustColors] = useMemo(() => {
-    const count = mobile ? 15 : 450;
-    const pos = new Float32Array(count * 3);
-    const col = new Float32Array(count * 3);
-
-    for (let i = 0; i < count; i++) {
-      pos[i * 3] = (Math.random() - 0.5) * 40;
-      pos[i * 3 + 1] = (Math.random() - 0.5) * 38;
-      pos[i * 3 + 2] = (Math.random() - 0.5) * 28 - 6;
-
-      col[i * 3] = 0.75 + Math.random() * 0.25;
-      col[i * 3 + 1] = 0.82 + Math.random() * 0.18;
-      col[i * 3 + 2] = 1.0;
     }
 
     return [pos, col];
   }, [mobile]);
 
   const starTexture = useMemo(() => {
-    const size = 64;
+    const size = 32;
     const canvas = document.createElement("canvas");
     canvas.width = size;
     canvas.height = size;
@@ -116,8 +71,8 @@ function CosmicStarfield({ mobile }: { mobile: boolean }) {
       size / 2, size / 2, size / 2,
     );
     gradient.addColorStop(0, "rgba(255,255,255,1)");
-    gradient.addColorStop(0.25, "rgba(235,245,255,0.85)");
-    gradient.addColorStop(0.6, "rgba(180,215,255,0.3)");
+    gradient.addColorStop(0.3, "rgba(235,245,255,0.8)");
+    gradient.addColorStop(0.7, "rgba(180,215,255,0.2)");
     gradient.addColorStop(1, "rgba(0,0,0,0)");
     ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, size, size);
@@ -129,54 +84,28 @@ function CosmicStarfield({ mobile }: { mobile: boolean }) {
 
   useFrame((state) => {
     const t = state.clock.elapsedTime;
-
     if (pointsRef.current) {
-      pointsRef.current.rotation.y = t * 0.003;
-      pointsRef.current.rotation.x = Math.sin(t * 0.002) * 0.015;
-    }
-
-    if (dustRef.current) {
-      dustRef.current.rotation.y = -t * 0.005;
-      dustRef.current.rotation.z = Math.cos(t * 0.003) * 0.02;
+      pointsRef.current.rotation.y = t * 0.002;
     }
   });
 
   return (
-    <>
-      <points ref={pointsRef}>
-        <bufferGeometry>
-          <bufferAttribute attach="attributes-position" args={[starPositions, 3]} />
-          <bufferAttribute attach="attributes-color" args={[starColors, 3]} />
-        </bufferGeometry>
-        <pointsMaterial
-          size={mobile ? 0.22 : 0.16}
-          map={starTexture}
-          vertexColors
-          transparent
-          opacity={1.0}
-          blending={THREE.AdditiveBlending}
-          depthWrite={false}
-          sizeAttenuation
-        />
-      </points>
-
-      <points ref={dustRef}>
-        <bufferGeometry>
-          <bufferAttribute attach="attributes-position" args={[dustPositions, 3]} />
-          <bufferAttribute attach="attributes-color" args={[dustColors, 3]} />
-        </bufferGeometry>
-        <pointsMaterial
-          size={mobile ? 0.30 : 0.24}
-          map={starTexture}
-          vertexColors
-          transparent
-          opacity={0.45}
-          blending={THREE.AdditiveBlending}
-          depthWrite={false}
-          sizeAttenuation
-        />
-      </points>
-    </>
+    <points ref={pointsRef}>
+      <bufferGeometry>
+        <bufferAttribute attach="attributes-position" args={[starPositions, 3]} />
+        <bufferAttribute attach="attributes-color" args={[starColors, 3]} />
+      </bufferGeometry>
+      <pointsMaterial
+        size={mobile ? 0.20 : 0.16}
+        map={starTexture}
+        vertexColors
+        transparent
+        opacity={1.0}
+        blending={THREE.AdditiveBlending}
+        depthWrite={false}
+        sizeAttenuation
+      />
+    </points>
   );
 }
 
@@ -202,7 +131,7 @@ function track(p: number, stops: [number, number][]) {
  */
 function EclipseRing({ intensity }: { intensity: number }) {
   const ringTexture = useMemo(() => {
-    const size = 1024;
+    const size = 512;
     const canvas = document.createElement("canvas");
     canvas.width = size;
     canvas.height = size;
@@ -219,7 +148,7 @@ function EclipseRing({ intensity }: { intensity: number }) {
         const dy = y - cy;
         const dist = Math.sqrt(dx * dx + dy * dy);
 
-        if (dist >= limbRadius - 4 && dist < limbRadius + 42) {
+        if (dist >= limbRadius - 4 && dist < limbRadius + 36) {
           const outwardDist = Math.max(0, dist - limbRadius);
           const core = Math.exp(-Math.pow(outwardDist / 3.8, 2.0));
           const glow = Math.exp(-Math.pow(outwardDist / 16.0, 1.5)) * 0.6;
@@ -757,7 +686,7 @@ function RealMoon({ mobile }: { mobile: boolean }) {
 
       <group ref={group}>
         <Suspense fallback={null}>
-          <CustomMoonModel innerRef={moonMesh} mobile={mobile} />
+          <CustomMoonModel innerRef={moonMesh} />
           <EclipseRing intensity={eclipseVal} />
         </Suspense>
       </group>
@@ -781,7 +710,7 @@ export default function MoonScene() {
         antialias: !mobile,
         alpha: true,
         powerPreference: "high-performance",
-        precision: mobile ? "mediump" : "highp",
+        stencil: false,
       }}
       camera={{ position: [0, 0, 4.2], fov: 40 }}
       style={{ pointerEvents: "none" }}
