@@ -172,12 +172,12 @@ export function AdminPage() {
     try {
       const { error } = await supabase
         .from("bookings")
-        .update({ status: "declined" })
+        .update({ status: "declined", ticket_token: null })
         .eq("id", booking.id);
 
       if (error) throw error;
 
-      const updatedBooking = { ...booking, status: "declined" };
+      const updatedBooking = { ...booking, status: "declined", ticket_token: null };
       setWhatsAppModal({
         isOpen: true,
         type: "decline",

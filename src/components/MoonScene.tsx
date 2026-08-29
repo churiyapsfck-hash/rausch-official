@@ -1,228 +1,49 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
+import { useGLTF } from "@react-three/drei";
 import * as THREE from "three";
 import { scrollState, setMoonLoadedState } from "@/lib/rausch-scroll";
 
-/**
- * Procedural Lunar Surface Synthesis
- * Generates photographic lunar textures with Maria basalt plains, impact craters,
- * Tycho/Copernicus ejecta ray systems, and bump relief in 10ms with 0KB network download.
- */
-function useLunarTextures(mobile: boolean) {
-  return useMemo(() => {
-    if (typeof document === "undefined") {
-      const dummy = new THREE.Texture();
-      return { albedoMap: dummy, bumpMap: dummy };
-    }
+useGLTF.preload("/models/moon.glb");
 
-    const w = mobile ? 1024 : 2048;
-    const h = mobile ? 512 : 1024;
-
-    const aCanvas = document.createElement("canvas");
-    aCanvas.width = w;
-    aCanvas.height = h;
-    const aCtx = aCanvas.getContext("2d")!;
-
-    const bCanvas = document.createElement("canvas");
-    bCanvas.width = w;
-    bCanvas.height = h;
-    const bCtx = bCanvas.getContext("2d")!;
-
-    // 1. Base lunar regolith tone (matte silvery gray)
-    aCtx.fillStyle = "#a2a5b0";
-    aCtx.fillRect(0, 0, w, h);
-
-    bCtx.fillStyle = "#808080";
-    bCtx.fillRect(0, 0, w, h);
-
-    const imgA = aCtx.getImageData(0, 0, w, h);
-    const imgB = bCtx.getImageData(0, 0, w, h);
-
-    // Deterministic pseudo-random sequence
-    let seed = 42;
-    const rnd = () => {
-      seed = (seed * 16807) % 2147483647;
-      return (seed - 1) / 2147483646;
-    };
-
-    // Maria (Dark Basalt Seas) definitions
-    const maria = [
-      { x: 0.30 * w, y: 0.38 * h, rx: 0.20 * w, ry: 0.18 * h, dark: 0.42 }, // Oceanus Procellarum
-      { x: 0.52 * w, y: 0.32 * h, rx: 0.13 * w, ry: 0.11 * h, dark: 0.48 }, // Mare Imbrium
-      { x: 0.68 * w, y: 0.42 * h, rx: 0.12 * w, ry: 0.10 * h, dark: 0.44 }, // Mare Serenitatis
-      { x: 0.76 * w, y: 0.48 * h, rx: 0.13 * w, ry: 0.12 * h, dark: 0.40 }, // Mare Tranquillitatis
-      { x: 0.86 * w, y: 0.40 * h, rx: 0.09 * w, ry: 0.09 * h, dark: 0.46 }, // Mare Crisium
-      { x: 0.42 * w, y: 0.58 * h, rx: 0.11 * w, ry: 0.10 * h, dark: 0.50 }, // Mare Nubium
-      { x: 0.62 * w, y: 0.62 * h, rx: 0.10 * w, ry: 0.09 * h, dark: 0.48 }, // Mare Nectaris
-      { x: 0.50 * w, y: 0.48 * h, rx: 0.08 * w, ry: 0.07 * h, dark: 0.45 }, // Mare Vaporum
-    ];
-
-    // Major impact crater centers with ray systems
-    const majorCraters = [
-      { x: 0.55 * w, y: 0.78 * h, r: 0.038 * w, rays: 14, rayLen: 0.38 * w }, // Tycho
-      { x: 0.38 * w, y: 0.42 * h, r: 0.028 * w, rays: 10, rayLen: 0.24 * w }, // Copernicus
-      { x: 0.26 * w, y: 0.44 * h, r: 0.020 * w, rays: 7, rayLen: 0.16 * w },  // Kepler
-      { x: 0.24 * w, y: 0.35 * h, r: 0.016 * w, rays: 6, rayLen: 0.12 * w },  // Aristarchus
-      { x: 0.65 * w, y: 0.24 * h, r: 0.024 * w, rays: 5, rayLen: 0.09 * w },  // Plato
-      { x: 0.72 * w, y: 0.62 * h, r: 0.030 * w, rays: 6, rayLen: 0.14 * w },  // Theophilus
-      { x: 0.48 * w, y: 0.68 * h, r: 0.032 * w, rays: 5, rayLen: 0.12 * w },  // Clavius
-      { x: 0.40 * w, y: 0.72 * h, r: 0.022 * w, rays: 4, rayLen: 0.08 * w },  // Bullialdus
-    ];
-
-    // Hundreds of medium and small impact craters
-    const craters: { x: number; y: number; r: number }[] = [];
-    for (let i = 0; i < (mobile ? 180 : 340); i++) {
-      craters.push({
-        x: rnd() * w,
-        y: rnd() * h,
-        r: (rnd() * 0.014 + 0.003) * w,
-      });
-    }
-
-    // Apply Maria shading and micro-variation
-    for (let y = 0; y < h; y++) {
-      for (let x = 0; x < w; x++) {
-        const idx = (y * w + x) * 4;
-        let brightness = 1.0;
-        let bump = 128;
-
-        // Maria calculation with soft organic falloff
-        for (const m of maria) {
-          const dx = (x - m.x) / m.rx;
-          const dy = (y - m.y) / m.ry;
-          const d2 = dx * dx + dy * dy;
-          if (d2 < 1.4) {
-            const f = Math.max(0, 1 - d2 / 1.4);
-            const noise = Math.sin(x * 0.04) * Math.cos(y * 0.04) * 0.10;
-            brightness *= (1 - f * (1 - m.dark + noise));
-            bump -= f * 26;
-          }
-        }
-
-        // Granular rock regolith noise
-        const n = (rnd() - 0.5) * 16;
-        const finalR = Math.max(0, Math.min(255, (168 * brightness) + n));
-        const finalG = Math.max(0, Math.min(255, (172 * brightness) + n));
-        const finalB = Math.max(0, Math.min(255, (182 * brightness) + n));
-
-        imgA.data[idx] = finalR;
-        imgA.data[idx + 1] = finalG;
-        imgA.data[idx + 2] = finalB;
-        imgA.data[idx + 3] = 255;
-
-        imgB.data[idx] = bump;
-        imgB.data[idx + 1] = bump;
-        imgB.data[idx + 2] = bump;
-        imgB.data[idx + 3] = 255;
-      }
-    }
-
-    aCtx.putImageData(imgA, 0, 0);
-    bCtx.putImageData(imgB, 0, 0);
-
-    // Draw Major Crater Rays on Albedo
-    for (const c of majorCraters) {
-      for (let a = 0; a < c.rays; a++) {
-        const angle = (a / c.rays) * Math.PI * 2 + (rnd() - 0.5) * 0.3;
-        const grad = aCtx.createLinearGradient(
-          c.x, c.y,
-          c.x + Math.cos(angle) * c.rayLen,
-          c.y + Math.sin(angle) * c.rayLen
-        );
-        grad.addColorStop(0, "rgba(245, 248, 255, 0.55)");
-        grad.addColorStop(0.35, "rgba(230, 238, 255, 0.22)");
-        grad.addColorStop(1, "rgba(220, 230, 255, 0)");
-
-        aCtx.strokeStyle = grad;
-        aCtx.lineWidth = c.r * 0.45;
-        aCtx.beginPath();
-        aCtx.moveTo(c.x, c.y);
-        aCtx.lineTo(c.x + Math.cos(angle) * c.rayLen, c.y + Math.sin(angle) * c.rayLen);
-        aCtx.stroke();
-      }
-    }
-
-    // Draw All Craters (Rims & Basins) on both Albedo and Bump maps
-    const allCraters = [...majorCraters, ...craters];
-    for (const c of allCraters) {
-      // 1. Crater Basin (Shadowed / Darker depression)
-      aCtx.beginPath();
-      aCtx.arc(c.x, c.y, c.r, 0, Math.PI * 2);
-      aCtx.fillStyle = "rgba(35, 38, 46, 0.45)";
-      aCtx.fill();
-
-      bCtx.beginPath();
-      bCtx.arc(c.x, c.y, c.r, 0, Math.PI * 2);
-      bCtx.fillStyle = "#323232";
-      bCtx.fill();
-
-      // 2. Raised Bright Crater Rim (Illuminated ridge)
-      aCtx.beginPath();
-      aCtx.arc(c.x, c.y, c.r * 1.05, 0, Math.PI * 2);
-      aCtx.strokeStyle = "rgba(250, 252, 255, 0.80)";
-      aCtx.lineWidth = Math.max(1.2, c.r * 0.24);
-      aCtx.stroke();
-
-      bCtx.beginPath();
-      bCtx.arc(c.x, c.y, c.r * 1.05, 0, Math.PI * 2);
-      bCtx.strokeStyle = "#f8f8f8";
-      bCtx.lineWidth = Math.max(1.5, c.r * 0.30);
-      bCtx.stroke();
-
-      // 3. Central Peak if large crater
-      if (c.r > 0.015 * w) {
-        aCtx.beginPath();
-        aCtx.arc(c.x, c.y, c.r * 0.18, 0, Math.PI * 2);
-        aCtx.fillStyle = "rgba(255, 255, 255, 0.95)";
-        aCtx.fill();
-
-        bCtx.beginPath();
-        bCtx.arc(c.x, c.y, c.r * 0.2, 0, Math.PI * 2);
-        bCtx.fillStyle = "#ffffff";
-        bCtx.fill();
-      }
-    }
-
-    const albedoTex = new THREE.CanvasTexture(aCanvas);
-    albedoTex.colorSpace = THREE.SRGBColorSpace;
-    albedoTex.anisotropy = mobile ? 2 : 4;
-
-    const bumpTex = new THREE.CanvasTexture(bCanvas);
-    bumpTex.anisotropy = mobile ? 2 : 4;
-
-    return { albedoMap: albedoTex, bumpMap: bumpTex };
-  }, [mobile]);
-}
-
-/**
- * Instant 3D Moon Surface Component (0ms Load Time, Zero 51MB Download Lag)
- */
-function ProceduralMoon({
+function CustomMoonModel({
   innerRef,
   mobile,
 }: {
   innerRef: React.RefObject<THREE.Group | null>;
   mobile: boolean;
 }) {
-  const { albedoMap, bumpMap } = useLunarTextures(mobile);
+  const gltf = useGLTF("/models/moon.glb");
 
   useEffect(() => {
     setMoonLoadedState(true, 100);
   }, []);
 
+  const model = useMemo(() => {
+    const scene = gltf.scene.clone(true);
+    scene.traverse((child) => {
+      if ((child as THREE.Mesh).isMesh) {
+        const m = child as THREE.Mesh;
+        m.castShadow = !mobile;
+        m.receiveShadow = !mobile;
+        if (m.material) {
+          const mat = m.material as THREE.MeshStandardMaterial;
+          mat.roughness = 0.96;
+          mat.metalness = 0.0;
+          if (mat.map) {
+            mat.map.anisotropy = mobile ? 2 : 4;
+            mat.bumpMap = mat.map;
+            mat.bumpScale = 0.085;
+          }
+        }
+      }
+    });
+    return scene;
+  }, [gltf, mobile]);
+
   return (
-    <group ref={innerRef}>
-      <mesh castShadow receiveShadow>
-        <sphereGeometry args={[1, mobile ? 64 : 96, mobile ? 64 : 96]} />
-        <meshStandardMaterial
-          map={albedoMap}
-          bumpMap={bumpMap}
-          bumpScale={mobile ? 0.065 : 0.085}
-          roughness={0.94}
-          metalness={0.0}
-          color="#ffffff"
-        />
-      </mesh>
+    <group ref={innerRef} scale={1.0 / 1.271864}>
+      <primitive object={model} />
     </group>
   );
 }
@@ -235,7 +56,7 @@ function CosmicStarfield({ mobile }: { mobile: boolean }) {
   const dustRef = useRef<THREE.Points>(null);
 
   const [starPositions, starColors, starSizes, starPhases] = useMemo(() => {
-    const count = mobile ? 90 : 1800;
+    const count = mobile ? 70 : 1800;
     const pos = new Float32Array(count * 3);
     const col = new Float32Array(count * 3);
     const sz = new Float32Array(count);
@@ -267,7 +88,7 @@ function CosmicStarfield({ mobile }: { mobile: boolean }) {
   }, [mobile]);
 
   const [dustPositions, dustColors] = useMemo(() => {
-    const count = mobile ? 20 : 450;
+    const count = mobile ? 15 : 450;
     const pos = new Float32Array(count * 3);
     const col = new Float32Array(count * 3);
 
@@ -281,11 +102,8 @@ function CosmicStarfield({ mobile }: { mobile: boolean }) {
       col[i * 3 + 2] = 1.0;
     }
 
-    return [dustPositionsArray(pos), dustColorsArray(col)];
+    return [pos, col];
   }, [mobile]);
-
-  function dustPositionsArray(arr: Float32Array) { return arr; }
-  function dustColorsArray(arr: Float32Array) { return arr; }
 
   const starTexture = useMemo(() => {
     const size = 64;
@@ -938,8 +756,10 @@ function RealMoon({ mobile }: { mobile: boolean }) {
       <CosmicStarfield mobile={mobile} />
 
       <group ref={group}>
-        <ProceduralMoon innerRef={moonMesh} mobile={mobile} />
-        <EclipseRing intensity={eclipseVal} />
+        <Suspense fallback={null}>
+          <CustomMoonModel innerRef={moonMesh} mobile={mobile} />
+          <EclipseRing intensity={eclipseVal} />
+        </Suspense>
       </group>
     </>
   );
@@ -956,11 +776,12 @@ export default function MoonScene() {
 
   return (
     <Canvas
-      dpr={mobile ? [1, 1.5] : [1, 2]}
+      dpr={mobile ? 1 : [1, 1.5]}
       gl={{
-        antialias: true,
+        antialias: !mobile,
         alpha: true,
         powerPreference: "high-performance",
+        precision: mobile ? "mediump" : "highp",
       }}
       camera={{ position: [0, 0, 4.2], fov: 40 }}
       style={{ pointerEvents: "none" }}

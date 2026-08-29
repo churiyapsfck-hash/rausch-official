@@ -23,6 +23,8 @@ export function PublicPassPage({ token }: { token: string }) {
       .then(({ data, error: err }) => {
         if (err || !data) {
           setError("Ticket not found or invalid pass token.");
+        } else if (data.status === "declined") {
+          setError("This pass has been DECLINED by event administration. Access to the venue is revoked.");
         } else {
           setBooking(data);
         }

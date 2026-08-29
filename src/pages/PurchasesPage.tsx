@@ -186,10 +186,10 @@ export function PurchasesPage() {
                   </div>
 
                   <div className="pt-2">
-                    {booking.ticket_token ? (
+                    {isConfirmed && booking.ticket_token ? (
                       <a
                         href={`/p/${booking.ticket_token}`}
-                        className="w-full flex items-center justify-center gap-2 rounded-xl bg-white/10 hover:bg-white hover:text-black py-3 font-mono text-[10px] font-semibold uppercase tracking-[0.2em] text-white transition-all"
+                        className="w-full flex items-center justify-center gap-2 rounded-xl bg-white hover:bg-silver py-3 font-mono text-[10px] font-semibold uppercase tracking-[0.2em] text-black transition-all shadow-[0_0_15px_rgba(255,255,255,0.15)]"
                       >
                         <QrCode className="h-4 w-4" />
                         <span>VIEW DIGITAL TICKET →</span>
@@ -244,8 +244,13 @@ export function PurchasesPage() {
                         )}
                       </div>
                     ) : (
-                      <div className="rounded-xl border border-red-500/20 bg-red-500/5 p-3 text-center font-mono text-[10px] text-red-300">
-                        Payment declined. Contact support @rausch.hyd
+                      <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-3.5 text-center space-y-1">
+                        <div className="font-mono text-xs font-bold text-red-300 tracking-wider">
+                          🚫 BOOKING DECLINED
+                        </div>
+                        <div className="font-mono text-[10px] text-red-400/80">
+                          Payment not verified. Access to the venue has been revoked.
+                        </div>
                       </div>
                     )}
                   </div>
