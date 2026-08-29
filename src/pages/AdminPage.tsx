@@ -857,21 +857,48 @@ export function AdminPage() {
       {/* Screenshot Lightbox Modal */}
       {lightboxUrl && (
         <div
-          className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4"
+          className="fixed inset-0 z-50 bg-black/95 flex items-center justify-center p-4 backdrop-blur-md"
           onClick={() => setLightboxUrl(null)}
         >
-          <div className="relative max-w-2xl w-full max-h-[90vh] flex flex-col items-center">
-            <button
-              onClick={() => setLightboxUrl(null)}
-              className="absolute -top-10 right-0 p-2 text-white hover:text-silver cursor-pointer"
-            >
-              <X className="h-6 w-6" />
-            </button>
+          <div className="relative max-w-3xl w-full max-h-[90vh] flex flex-col items-center gap-3">
+            <div className="flex items-center justify-between w-full text-xs font-mono text-zinc-400 bg-zinc-900/80 px-4 py-2 rounded-xl border border-white/10">
+              <span className="text-white font-semibold flex items-center gap-1.5">
+                <Eye className="h-3.5 w-3.5 text-blue-400" />
+                Payment Screenshot Proof
+              </span>
+              <div className="flex items-center gap-3">
+                <a
+                  href={lightboxUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={(e) => e.stopPropagation()}
+                  className="flex items-center gap-1 text-blue-400 hover:text-blue-300 font-semibold cursor-pointer"
+                >
+                  <ExternalLink className="h-3.5 w-3.5" />
+                  <span>Open Original Image</span>
+                </a>
+                <button
+                  onClick={() => setLightboxUrl(null)}
+                  className="p-1 text-zinc-400 hover:text-white cursor-pointer"
+                  title="Close (Esc)"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
             <img
               src={lightboxUrl}
               alt="Payment Screenshot Proof"
-              className="max-h-[85vh] w-auto rounded-xl object-contain border border-white/20 shadow-2xl"
+              className="max-h-[80vh] w-auto max-w-full rounded-xl object-contain border border-white/20 shadow-2xl bg-zinc-950"
               onClick={(e) => e.stopPropagation()}
+              onError={(e) => {
+                const target = e.currentTarget;
+                target.style.display = "none";
+                target.parentElement?.insertAdjacentHTML(
+                  "beforeend",
+                  '<div class="p-8 text-center font-mono text-xs text-red-400 bg-red-950/20 border border-red-500/30 rounded-xl">Screenshot file not found in storage. Click "Open Original Image" above.</div>'
+                );
+              }}
             />
           </div>
         </div>
