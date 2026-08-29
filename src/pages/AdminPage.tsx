@@ -4,6 +4,7 @@ import { PASS_PRICING } from "@/lib/upi";
 import {
   CheckCircle2,
   Clock,
+  Copy,
   DollarSign,
   Download,
   Eye,
@@ -188,10 +189,29 @@ export function AdminPage() {
     }
   };
 
-  const handleViewScreenshot = (path: string) => {
-    const { data } = supabase.storage.from("payment-screenshots").getPublicUrl(path);
-    if (data?.publicUrl) {
-      setLightboxUrl(data.publicUrl);
+  const handleViewScreenshot = async (pathOrUrl: string) => {
+    if (!pathOrUrl) return;
+    if (pathOrUrl.startsWith("http://") || pathOrUrl.startsWith("https://") || pathOrUrl.startsWith("data:")) {
+      setLightboxUrl(pathOrUrl);
+      return;
+    }
+    const cleanPath = pathOrUrl.replace(/^payment-screenshots\//, "");
+    try {
+      const { data: signedData } = await supabase.storage
+        .from("payment-screenshots")
+        .createSignedUrl(cleanPath, 3600);
+      if (signedData?.signedUrl) {
+        setLightboxUrl(signedData.signedUrl);
+        return;
+      }
+    } catch (e) {
+      console.warn(e);
+    }
+    const { data: pubData } = supabase.storage
+      .from("payment-screenshots")
+      .getPublicUrl(cleanPath);
+    if (pubData?.publicUrl) {
+      setLightboxUrl(pubData.publicUrl);
     }
   };
 
@@ -511,11 +531,11 @@ export function AdminPage() {
               <table className="w-full text-left font-mono text-xs">
                 <thead className="border-b border-white/10 bg-white/5 text-[10px] uppercase tracking-wider text-muted-foreground">
                   <tr>
-                    <th className="py-3 px-4">Ref ID</th>
+                    <th className="py-3 px-4">Ref ID & Time</th>
                     <th className="py-3 px-4">Guest Info</th>
                     <th className="py-3 px-4">Pass Tier</th>
                     <th className="py-3 px-4">Amount</th>
-                    <th className="py-3 px-4">UTR / Proof</th>
+                    <th className="py-3 px-4">UTR & Payment Proof</th>
                     <th className="py-3 px-4">Status</th>
                     <th className="py-3 px-4 text-right">Actions & WhatsApp</th>
                   </tr>
@@ -532,36 +552,85 @@ export function AdminPage() {
                       const tier = PASS_PRICING[b.pass_type as keyof typeof PASS_PRICING] || {
                         name: b.pass_type?.toUpperCase(),
                       };
+                      const ssPath = b.payment_screenshot_path || b.screenshot_path;
+                      const utrVal = b.utr_number || b.utr;
+                      const bookingDate = b.created_at ? new Date(b.created_at) : null;
+
                       return (
                         <tr key={b.id} className="hover:bg-white/[0.02] transition-colors">
-                          <td className="py-3 px-4 text-white font-semibold">{b.purchase_id}</td>
                           <td className="py-3 px-4">
-                            <div className="text-white font-medium">{b.full_name}</div>
-                            <div className="text-[10px] text-muted-foreground">{b.phone}</div>
+                            <div className="text-white font-semibold text-xs tracking-wider">{b.purchase_id}</div>
+                            {bookingDate && (
+                              <div className="flex items-center gap-1 text-[10px] text-muted-foreground mt-0.5">
+                                <Clock className="h-3 w-3 text-silver/60" />
+                                <span>
+                                  {bookingDate.toLocaleDateString("en-IN", {
+                                    day: "2-digit",
+                                    month: "short",
+                                    year: "numeric",
+                                  })}
+                                  ,{" "}
+                                  {bookingDate.toLocaleTimeString("en-IN", {
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                    hour12: true,
+                                  })}
+                                </span>
+                              </div>
+                            )}
                           </td>
                           <td className="py-3 px-4">
-                            <span className="text-silver">{tier.name}</span>
+                            <div className="text-white font-medium">{b.full_name}</div>
+                            <div className="text-[10px] text-muted-foreground font-mono">{b.phone}</div>
+                            {b.email && <div className="text-[9px] text-muted-foreground/70 truncate max-w-[160px]">{b.email}</div>}
+                          </td>
+                          <td className="py-3 px-4">
+                            <span className="text-silver font-medium">{tier.name}</span>
+                            {b.coupon_code && (
+                              <div className="text-[9px] text-emerald-400 font-mono mt-0.5">
+                                Promo: {b.coupon_code} (-{b.discount_percent}%)
+                              </div>
+                            )}
                           </td>
                           <td className="py-3 px-4 text-emerald-400 font-semibold">
                             ₹{b.final_amount.toLocaleString()}
                           </td>
-                          <td className="py-3 px-4">
-                            {b.utr_number && <div className="text-white">{b.utr_number}</div>}
-                            {b.payment_screenshot_path ? (
+                          <td className="py-3 px-4 space-y-1">
+                            {utrVal ? (
+                              <div className="flex items-center gap-1.5 bg-white/5 border border-white/10 px-2 py-0.5 rounded-lg w-max">
+                                <span className="text-white font-mono text-[11px] font-semibold tracking-wider">
+                                  {utrVal}
+                                </span>
+                                <button
+                                  onClick={() => {
+                                    navigator.clipboard.writeText(utrVal);
+                                    alert(`Copied UTR: ${utrVal}`);
+                                  }}
+                                  className="text-muted-foreground hover:text-white transition-colors cursor-pointer"
+                                  title="Copy UTR Number"
+                                >
+                                  <Copy className="h-3 w-3" />
+                                </button>
+                              </div>
+                            ) : (
+                              <span className="text-[10px] text-muted-foreground">No UTR</span>
+                            )}
+
+                            {ssPath ? (
                               <button
-                                onClick={() => handleViewScreenshot(b.payment_screenshot_path)}
-                                className="inline-flex items-center gap-1 text-[10px] text-blue-400 hover:text-blue-300 mt-0.5 cursor-pointer"
+                                onClick={() => handleViewScreenshot(ssPath)}
+                                className="inline-flex items-center gap-1 text-[10px] font-semibold text-blue-400 hover:text-blue-300 bg-blue-500/10 border border-blue-500/20 px-2 py-0.5 rounded-md transition-colors cursor-pointer"
                               >
                                 <Eye className="h-3 w-3" />
-                                <span>View Proof</span>
+                                <span>View Payment SS</span>
                               </button>
                             ) : (
-                              <span className="text-[10px] text-muted-foreground">No file</span>
+                              <div className="text-[10px] text-muted-foreground/60 italic">No SS uploaded</div>
                             )}
                           </td>
                           <td className="py-3 px-4">
                             <span
-                              className={`rounded-full px-2 py-0.5 text-[9px] uppercase tracking-wider ${
+                              className={`rounded-full px-2 py-0.5 text-[9px] uppercase tracking-wider font-semibold ${
                                 b.status === "checked_in"
                                   ? "bg-purple-500/20 text-purple-300 border border-purple-500/30"
                                   : b.status === "confirmed"
