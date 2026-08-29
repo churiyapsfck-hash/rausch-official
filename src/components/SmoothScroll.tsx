@@ -4,32 +4,34 @@ import { readScroll, scrollState } from "@/lib/rausch-scroll";
 
 export function SmoothScroll({ children }: { children: React.ReactNode }) {
   useEffect(() => {
-    const isMobile = window.innerWidth < 768 || "ontouchstart" in window;
+    const isTouch = window.matchMedia("(pointer: coarse)").matches || "ontouchstart" in window || window.innerWidth < 768;
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     let lenis: Lenis | null = null;
     let raf = 0;
 
-    if (!reduced) {
-      lenis = new Lenis({
-        duration: isMobile ? 0.95 : 1.2,
-        lerp: isMobile ? 0.12 : 0.085,
-        smoothWheel: true,
-        wheelMultiplier: 0.95,
-        touchMultiplier: isMobile ? 1.1 : 1.3,
-        syncTouch: true,
-      });
-      const loop = (time: number) => {
-        lenis?.raf(time);
-        readScroll();
-        raf = requestAnimationFrame(loop);
-      };
-      raf = requestAnimationFrame(loop);
-    } else {
+    if (isTouch || reduced) {
+      // 100% native buttery 120Hz hardware scrolling on iOS / Android
       const onScroll = () => readScroll();
       window.addEventListener("scroll", onScroll, { passive: true });
       readScroll();
       return () => window.removeEventListener("scroll", onScroll);
     }
+
+    // Smooth inertia scroll for desktop mouse wheels only
+    lenis = new Lenis({
+      duration: 1.1,
+      lerp: 0.09,
+      smoothWheel: true,
+      wheelMultiplier: 0.95,
+      syncTouch: false,
+    });
+
+    const loop = (time: number) => {
+      lenis?.raf(time);
+      readScroll();
+      raf = requestAnimationFrame(loop);
+    };
+    raf = requestAnimationFrame(loop);
 
     const onPointer = (e: PointerEvent) => {
       if (e.pointerType === "mouse") {
@@ -39,25 +41,9 @@ export function SmoothScroll({ children }: { children: React.ReactNode }) {
     };
     window.addEventListener("pointermove", onPointer, { passive: true });
 
-    // Subtle gyro tilt parallax for mobile devices
-    const onOrientation = (e: DeviceOrientationEvent) => {
-      if (e.gamma !== null && e.beta !== null) {
-        // gamma: left-to-right [-90, 90], beta: front-to-back [-180, 180]
-        const targetX = Math.max(-1, Math.min(1, e.gamma / 30));
-        const targetY = Math.max(-1, Math.min(1, (e.beta - 45) / 35));
-        scrollState.pointerX += (targetX - scrollState.pointerX) * 0.1;
-        scrollState.pointerY += (targetY - scrollState.pointerY) * 0.1;
-      }
-    };
-
-    if (window.DeviceOrientationEvent && typeof window.DeviceOrientationEvent.requestPermission !== "function") {
-      window.addEventListener("deviceorientation", onOrientation, { passive: true });
-    }
-
     return () => {
       cancelAnimationFrame(raf);
       window.removeEventListener("pointermove", onPointer);
-      window.removeEventListener("deviceorientation", onOrientation);
       lenis?.destroy();
     };
   }, []);

@@ -142,7 +142,6 @@ export function AdminPage() {
         .update({
           status: "confirmed",
           ticket_token: generatedToken,
-          updated_at: new Date().toISOString(),
         })
         .eq("id", booking.id);
 
@@ -169,7 +168,7 @@ export function AdminPage() {
     try {
       const { error } = await supabase
         .from("bookings")
-        .update({ status: "declined", updated_at: new Date().toISOString() })
+        .update({ status: "declined" })
         .eq("id", booking.id);
 
       if (error) throw error;

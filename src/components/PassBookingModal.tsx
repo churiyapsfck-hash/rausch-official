@@ -227,14 +227,15 @@ export function PassBookingModal({ isOpen, onClose, initialTier = "general" }: P
         }
       }
 
-      await supabase
+      const { error: updateErr } = await supabase
         .from("bookings")
         .update({
-          utr_number: cleanUtr,
-          payment_screenshot_path: screenshotPath || null,
-          updated_at: new Date().toISOString(),
+          utr: cleanUtr,
+          screenshot_path: screenshotPath || null,
         })
         .eq("id", booking.id);
+
+      if (updateErr) throw updateErr;
 
       setStep("success");
     } catch (err: any) {
