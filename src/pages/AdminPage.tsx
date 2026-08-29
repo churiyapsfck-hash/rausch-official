@@ -59,6 +59,10 @@ export function AdminPage() {
   const [creatingCoupon, setCreatingCoupon] = useState(false);
   const [couponMsg, setCouponMsg] = useState("");
 
+  const [editingUtrId, setEditingUtrId] = useState<string | null>(null);
+  const [tempUtrVal, setTempUtrVal] = useState("");
+  const [savingUtr, setSavingUtr] = useState(false);
+
   const fetchAdminData = async () => {
     try {
       const { data: bData } = await supabase
@@ -259,6 +263,32 @@ export function AdminPage() {
     }
   };
 
+  const handleSaveUtr = async (bookingId: string) => {
+    const clean = tempUtrVal.trim();
+    if (!clean || clean.length < 4) {
+      alert("Please enter a valid UTR number");
+      return;
+    }
+    setSavingUtr(true);
+    try {
+      const { error } = await supabase
+        .from("bookings")
+        .update({ utr: clean, utr_number: clean })
+        .eq("id", bookingId);
+
+      if (error) throw error;
+      setBookings((prev) =>
+        prev.map((b) => (b.id === bookingId ? { ...b, utr: clean, utr_number: clean } : b))
+      );
+      setEditingUtrId(null);
+      setTempUtrVal("");
+    } catch (err: any) {
+      alert(err.message || "Failed to save UTR");
+    } finally {
+      setSavingUtr(false);
+    }
+  };
+
   // Metrics
   const verifiedBookings = bookings.filter((b) => b.status === "confirmed" || b.status === "checked_in");
   const totalRevenue = verifiedBookings.reduce((sum, b) => sum + (b.final_amount || 0), 0);
@@ -273,6 +303,7 @@ export function AdminPage() {
       b.full_name?.toLowerCase().includes(query) ||
       b.phone?.toLowerCase().includes(query) ||
       b.purchase_id?.toLowerCase().includes(query) ||
+      b.utr?.toLowerCase().includes(query) ||
       b.utr_number?.toLowerCase().includes(query);
     return matchesStatus && matchesQuery;
   });
@@ -611,8 +642,45 @@ export function AdminPage() {
                                   <Copy className="h-3 w-3" />
                                 </button>
                               </div>
+                            ) : editingUtrId === b.id ? (
+                              <div className="flex items-center gap-1">
+                                <input
+                                  type="text"
+                                  placeholder="12-digit UTR"
+                                  value={tempUtrVal}
+                                  onChange={(e) => setTempUtrVal(e.target.value)}
+                                  className="w-28 bg-zinc-900 border border-amber-500/50 rounded px-1.5 py-0.5 text-[10px] font-mono text-white focus:outline-none"
+                                />
+                                <button
+                                  onClick={() => handleSaveUtr(b.id)}
+                                  disabled={savingUtr}
+                                  className="bg-amber-500 text-black px-1.5 py-0.5 rounded text-[9px] font-bold uppercase hover:bg-amber-400 cursor-pointer"
+                                >
+                                  {savingUtr ? "..." : "Save"}
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    setEditingUtrId(null);
+                                    setTempUtrVal("");
+                                  }}
+                                  className="text-muted-foreground hover:text-white px-1 text-[10px] cursor-pointer"
+                                >
+                                  ✕
+                                </button>
+                              </div>
                             ) : (
-                              <span className="text-[10px] text-muted-foreground">No UTR</span>
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-[10px] text-muted-foreground">No UTR</span>
+                                <button
+                                  onClick={() => {
+                                    setEditingUtrId(b.id);
+                                    setTempUtrVal("");
+                                  }}
+                                  className="text-[9px] font-mono text-amber-400 hover:text-amber-300 underline cursor-pointer"
+                                >
+                                  + Set UTR
+                                </button>
+                              </div>
                             )}
 
                             {ssPath ? (

@@ -227,20 +227,50 @@ export function PassBookingModal({ isOpen, onClose, initialTier = "general" }: P
         }
       }
 
-      const { error: updateErr } = await supabase
+      // Safe resilient update to bookings table
+      const updateData: Record<string, any> = {
+        utr: cleanUtr,
+        utr_number: cleanUtr,
+      };
+      if (screenshotPath) {
+        updateData.screenshot_path = screenshotPath;
+        updateData.payment_screenshot_path = screenshotPath;
+      }
+
+      let { error: updateErr } = await supabase
         .from("bookings")
-        .update({
-          utr: cleanUtr,
-          screenshot_path: screenshotPath || null,
-        })
+        .update(updateData)
         .eq("id", booking.id);
 
-      if (updateErr) throw updateErr;
+      if (updateErr) {
+        // Fallback to standard columns
+        const fb1 = await supabase
+          .from("bookings")
+          .update({
+            utr: cleanUtr,
+            screenshot_path: screenshotPath || null,
+          })
+          .eq("id", booking.id);
+
+        if (fb1.error) {
+          const fb2 = await supabase
+            .from("bookings")
+            .update({
+              utr_number: cleanUtr,
+              payment_screenshot_path: screenshotPath || null,
+            })
+            .eq("id", booking.id);
+
+          if (fb2.error) {
+            throw fb2.error;
+          }
+        }
+      }
 
       setStep("success");
     } catch (err: any) {
-      console.error(err);
-      setErrorMsg(err.message || "Failed to submit verification details.");
+      console.error("UTR submission error:", err);
+      setErrorMsg(err.message || "Failed to submit verification details. Please try again.");
     } finally {
       setUploading(false);
     }
@@ -547,11 +577,20 @@ export function PassBookingModal({ isOpen, onClose, initialTier = "general" }: P
               </div>
             </div>
 
+            {/* Step 2 Reminder */}
+            <div className="rounded-lg bg-amber-500/10 border border-amber-500/20 p-2.5 text-[11px] text-amber-200 text-left flex items-start gap-2">
+              <span className="text-amber-400">⚡</span>
+              <div>
+                <strong>Next Step:</strong> Complete payment in your UPI app, then click below to enter your <strong>12-digit UTR / Reference No.</strong> to get your pass verified.
+              </div>
+            </div>
+
             <button
               onClick={() => setStep("utr")}
-              className="w-full rounded-xl bg-white py-3 font-mono text-[11px] font-semibold uppercase tracking-[0.25em] text-black hover:bg-silver transition-all shadow-[0_0_20px_rgba(255,255,255,0.2)]"
+              className="w-full rounded-xl bg-white py-3.5 font-mono text-[11px] font-bold uppercase tracking-[0.25em] text-black hover:bg-silver transition-all shadow-[0_0_25px_rgba(255,255,255,0.25)] flex items-center justify-center gap-2"
             >
-              I HAVE PAID · SUBMIT UTR →
+              <span>I HAVE PAID · SUBMIT 12-DIGIT UTR</span>
+              <span>→</span>
             </button>
           </div>
         )}
@@ -563,23 +602,33 @@ export function PassBookingModal({ isOpen, onClose, initialTier = "general" }: P
               <span className="font-semibold text-white">Reference ID:</span> {booking?.purchase_id}
               <br />
               <span className="text-[11px] text-muted-foreground">
-                Please enter the 12-digit UTR from your payment receipt for instant gate clearance.
+                Enter the 12-digit UTR / Transaction Reference Number from your payment receipt.
               </span>
             </div>
 
             <div>
-              <label className="block font-mono text-[9px] uppercase tracking-[0.25em] text-muted-foreground mb-1">
-                12-DIGIT UPI UTR / TRANSACTION ID *
-              </label>
+              <div className="flex items-center justify-between mb-1">
+                <label className="block font-mono text-[9px] uppercase tracking-[0.25em] text-muted-foreground">
+                  12-DIGIT UPI UTR / TRANSACTION ID *
+                </label>
+                {utr.trim().length >= 10 && (
+                  <span className="text-[10px] font-mono text-emerald-400 font-semibold">✓ Ready</span>
+                )}
+              </div>
               <input
                 type="text"
                 required
-                maxLength={16}
+                maxLength={22}
                 value={utr}
                 onChange={(e) => setUtr(e.target.value)}
                 placeholder="e.g. 423819283719"
-                className="w-full rounded-lg border border-white/15 bg-white/5 px-3 py-2 text-sm font-mono text-white tracking-widest placeholder-white/30 focus:border-silver focus:outline-none"
+                className="w-full rounded-lg border border-white/15 bg-white/5 px-3 py-2.5 text-sm font-mono text-white tracking-widest placeholder-white/30 focus:border-silver focus:outline-none"
               />
+              <div className="mt-1.5 flex flex-wrap gap-1.5 text-[9px] font-mono text-muted-foreground">
+                <span className="bg-white/5 px-1.5 py-0.5 rounded text-silver/90">GPay: "UPI transaction ID"</span>
+                <span className="bg-white/5 px-1.5 py-0.5 rounded text-silver/90">PhonePe: "UTR"</span>
+                <span className="bg-white/5 px-1.5 py-0.5 rounded text-silver/90">Paytm: "UPI Ref No"</span>
+              </div>
             </div>
 
             <div>

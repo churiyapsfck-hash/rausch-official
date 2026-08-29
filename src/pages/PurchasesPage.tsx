@@ -174,17 +174,19 @@ export function PurchasesPage() {
                         <span>Amount Paid</span>
                         <span className="text-emerald-400 font-semibold">₹{booking.final_amount.toLocaleString()}</span>
                       </div>
-                      {booking.utr_number && (
-                        <div className="flex justify-between text-muted-foreground text-[11px]">
-                          <span>UPI Ref / UTR</span>
-                          <span className="text-white font-mono">{booking.utr_number}</span>
-                        </div>
-                      )}
+                      <div className="flex justify-between text-muted-foreground text-[11px]">
+                        <span>UPI Ref / UTR</span>
+                        <span className="text-white font-mono">
+                          {booking.utr || booking.utr_number || (
+                            <span className="text-amber-400 font-normal">Pending Entry</span>
+                          )}
+                        </span>
+                      </div>
                     </div>
                   </div>
 
                   <div className="pt-2">
-                    {booking.ticket_token && (
+                    {booking.ticket_token ? (
                       <a
                         href={`/p/${booking.ticket_token}`}
                         className="w-full flex items-center justify-center gap-2 rounded-xl bg-white/10 hover:bg-white hover:text-black py-3 font-mono text-[10px] font-semibold uppercase tracking-[0.2em] text-white transition-all"
@@ -192,6 +194,59 @@ export function PurchasesPage() {
                         <QrCode className="h-4 w-4" />
                         <span>VIEW DIGITAL TICKET →</span>
                       </a>
+                    ) : isPending ? (
+                      <div className="space-y-2">
+                        {(!booking.utr && !booking.utr_number) ? (
+                          <form
+                            onSubmit={async (e) => {
+                              e.preventDefault();
+                              const inputVal = (e.currentTarget.elements.namedItem("utrInput") as HTMLInputElement)?.value?.trim();
+                              if (!inputVal || inputVal.length < 6) {
+                                alert("Please enter a valid 12-digit UPI UTR number");
+                                return;
+                              }
+                              try {
+                                const { error } = await supabase
+                                  .from("bookings")
+                                  .update({ utr: inputVal, utr_number: inputVal })
+                                  .eq("id", booking.id);
+                                if (error) throw error;
+                                alert("UTR saved successfully!");
+                                user && fetchBookings(user.id);
+                              } catch (err: any) {
+                                alert(err.message || "Failed to update UTR");
+                              }
+                            }}
+                            className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 space-y-2 text-left"
+                          >
+                            <div className="font-mono text-[10px] text-amber-200">
+                              ⚡ <strong>Enter UTR to verify pass:</strong>
+                            </div>
+                            <div className="flex gap-1.5">
+                              <input
+                                name="utrInput"
+                                required
+                                placeholder="12-digit UTR"
+                                className="flex-1 rounded-lg border border-white/20 bg-black/60 px-2.5 py-1.5 font-mono text-xs text-white focus:outline-none focus:border-amber-400"
+                              />
+                              <button
+                                type="submit"
+                                className="rounded-lg bg-amber-400 px-3 py-1.5 font-mono text-[10px] font-bold text-black uppercase hover:bg-amber-300 transition-colors cursor-pointer"
+                              >
+                                Submit
+                              </button>
+                            </div>
+                          </form>
+                        ) : (
+                          <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-3 text-center font-mono text-[10px] text-amber-300">
+                            Payment under verification by admin
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="rounded-xl border border-red-500/20 bg-red-500/5 p-3 text-center font-mono text-[10px] text-red-300">
+                        Payment declined. Contact support @rausch.hyd
+                      </div>
                     )}
                   </div>
                 </div>
