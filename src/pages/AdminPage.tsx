@@ -670,21 +670,21 @@ export function AdminPage() {
 
                 <div>
                   <label className="block text-muted-foreground uppercase text-[9px] tracking-wider mb-1">
-                    Discount Percentage (%)
+                    Discount Percentage (%) (1 - 100%)
                   </label>
-                  <select
-                    value={newCouponPercent}
-                    onChange={(e) => setNewCouponPercent(e.target.value)}
-                    className="w-full rounded-xl border border-white/10 bg-zinc-900 px-4 py-2.5 text-white focus:outline-none focus:border-white/30"
-                  >
-                    <option value="5">5% OFF</option>
-                    <option value="10">10% OFF</option>
-                    <option value="15">15% OFF</option>
-                    <option value="20">20% OFF</option>
-                    <option value="25">25% OFF</option>
-                    <option value="30">30% OFF</option>
-                    <option value="50">50% OFF</option>
-                  </select>
+                  <div className="relative">
+                    <input
+                      type="number"
+                      min="1"
+                      max="100"
+                      required
+                      placeholder="e.g. 10, 25, 50, 100"
+                      value={newCouponPercent}
+                      onChange={(e) => setNewCouponPercent(e.target.value)}
+                      className="w-full rounded-xl border border-white/10 bg-zinc-900 px-4 py-2.5 text-white focus:outline-none focus:border-white/30 font-mono"
+                    />
+                    <span className="absolute right-4 top-1/2 -translate-y-1/2 font-mono text-xs text-muted-foreground">% OFF</span>
+                  </div>
                 </div>
 
                 <div>
