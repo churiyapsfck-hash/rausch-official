@@ -6,13 +6,12 @@ import { scrollState, setMoonLoadedState } from "@/lib/rausch-scroll";
 
 useGLTF.preload("/models/moon.glb");
 
-/**
- * Exact Original 3D Moon Model - Untampered Native Shading & Textures
- */
 function CustomMoonModel({
   innerRef,
+  mobile,
 }: {
   innerRef: React.RefObject<THREE.Group | null>;
+  mobile: boolean;
 }) {
   const gltf = useGLTF("/models/moon.glb");
 
@@ -20,9 +19,31 @@ function CustomMoonModel({
     setMoonLoadedState(true, 100);
   }, []);
 
+  const model = useMemo(() => {
+    const scene = gltf.scene.clone(true);
+    scene.traverse((child) => {
+      if ((child as THREE.Mesh).isMesh) {
+        const m = child as THREE.Mesh;
+        m.castShadow = true;
+        m.receiveShadow = true;
+        if (m.material) {
+          const mat = m.material as THREE.MeshStandardMaterial;
+          mat.roughness = 0.96;
+          mat.metalness = 0.0;
+          if (mat.map) {
+            mat.map.anisotropy = 8;
+            mat.bumpMap = mat.map;
+            mat.bumpScale = 0.085;
+          }
+        }
+      }
+    });
+    return scene;
+  }, [gltf]);
+
   return (
     <group ref={innerRef} scale={1.0 / 1.271864}>
-      <primitive object={gltf.scene} />
+      <primitive object={model} />
     </group>
   );
 }
@@ -32,51 +53,76 @@ function CustomMoonModel({
  */
 function CosmicStarfield({ mobile }: { mobile: boolean }) {
   const pointsRef = useRef<THREE.Points>(null);
+  const dustRef = useRef<THREE.Points>(null);
 
-  const [starPositions, starColors] = useMemo(() => {
-    const count = mobile ? 50 : 1200;
+  const [starPositions, starColors, starSizes, starPhases] = useMemo(() => {
+    const count = mobile ? 500 : 1600;
     const pos = new Float32Array(count * 3);
     const col = new Float32Array(count * 3);
+    const sz = new Float32Array(count);
+    const ph = new Float32Array(count);
 
     const colors = [
       new THREE.Color("#ffffff"),
-      new THREE.Color("#f0f7ff"),
-      new THREE.Color("#d8e8ff"),
-      new THREE.Color("#eee6ff"),
+      new THREE.Color("#e8f0fe"),
       new THREE.Color("#d0e2ff"),
+      new THREE.Color("#eae4ff"),
+      new THREE.Color("#c8d6f0"),
     ];
 
     for (let i = 0; i < count; i++) {
-      pos[i * 3] = (Math.random() - 0.5) * 44;
-      pos[i * 3 + 1] = (Math.random() - 0.5) * 36;
-      pos[i * 3 + 2] = -Math.random() * 26 - 1.5;
+      // Celestial sphere distribution
+      const r = 25 + Math.random() * 50;
+      const theta = Math.random() * Math.PI * 2;
+      const phi = Math.acos(2 * Math.random() - 1);
+
+      pos[i * 3] = r * Math.sin(phi) * Math.cos(theta);
+      pos[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta);
+      pos[i * 3 + 2] = r * Math.cos(phi) - 5; // offset slightly behind
 
       const c = colors[Math.floor(Math.random() * colors.length)]!;
       col[i * 3] = c.r;
       col[i * 3 + 1] = c.g;
       col[i * 3 + 2] = c.b;
+
+      sz[i] = Math.random() < 0.12 ? 1.8 + Math.random() * 1.5 : 0.8 + Math.random() * 0.9;
+      ph[i] = Math.random() * Math.PI * 2;
     }
 
+    return [pos, col, sz, ph];
+  }, [mobile]);
+
+  const [dustPositions, dustColors] = useMemo(() => {
+    const count = mobile ? 120 : 400;
+    const pos = new Float32Array(count * 3);
+    const col = new Float32Array(count * 3);
+
+    for (let i = 0; i < count; i++) {
+      pos[i * 3] = (Math.random() - 0.5) * 40;
+      pos[i * 3 + 1] = (Math.random() - 0.5) * 40;
+      pos[i * 3 + 2] = (Math.random() - 0.5) * 30 - 10;
+
+      const brightness = 0.2 + Math.random() * 0.4;
+      col[i * 3] = brightness * 0.8;
+      col[i * 3 + 1] = brightness * 0.9;
+      col[i * 3 + 2] = brightness * 1.0;
+    }
     return [pos, col];
   }, [mobile]);
 
   const starTexture = useMemo(() => {
-    const size = 32;
+    const size = 64;
     const canvas = document.createElement("canvas");
     canvas.width = size;
     canvas.height = size;
     const ctx = canvas.getContext("2d")!;
-    const gradient = ctx.createRadialGradient(
-      size / 2, size / 2, 0,
-      size / 2, size / 2, size / 2,
-    );
-    gradient.addColorStop(0, "rgba(255,255,255,1)");
-    gradient.addColorStop(0.3, "rgba(235,245,255,0.8)");
-    gradient.addColorStop(0.7, "rgba(180,215,255,0.2)");
-    gradient.addColorStop(1, "rgba(0,0,0,0)");
-    ctx.fillStyle = gradient;
+    const grad = ctx.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
+    grad.addColorStop(0, "rgba(255, 255, 255, 1)");
+    grad.addColorStop(0.25, "rgba(235, 245, 255, 0.85)");
+    grad.addColorStop(0.6, "rgba(180, 210, 255, 0.25)");
+    grad.addColorStop(1, "rgba(0, 0, 0, 0)");
+    ctx.fillStyle = grad;
     ctx.fillRect(0, 0, size, size);
-
     const tex = new THREE.CanvasTexture(canvas);
     tex.colorSpace = THREE.SRGBColorSpace;
     return tex;
@@ -85,27 +131,50 @@ function CosmicStarfield({ mobile }: { mobile: boolean }) {
   useFrame((state) => {
     const t = state.clock.elapsedTime;
     if (pointsRef.current) {
-      pointsRef.current.rotation.y = t * 0.002;
+      pointsRef.current.rotation.y = t * 0.003;
+      pointsRef.current.rotation.x = t * 0.0015;
+    }
+    if (dustRef.current) {
+      dustRef.current.rotation.y = -t * 0.005;
     }
   });
 
   return (
-    <points ref={pointsRef}>
-      <bufferGeometry>
-        <bufferAttribute attach="attributes-position" args={[starPositions, 3]} />
-        <bufferAttribute attach="attributes-color" args={[starColors, 3]} />
-      </bufferGeometry>
-      <pointsMaterial
-        size={mobile ? 0.20 : 0.16}
-        map={starTexture}
-        vertexColors
-        transparent
-        opacity={1.0}
-        blending={THREE.AdditiveBlending}
-        depthWrite={false}
-        sizeAttenuation
-      />
-    </points>
+    <>
+      <points ref={pointsRef}>
+        <bufferGeometry>
+          <bufferAttribute attach="attributes-position" args={[starPositions, 3]} />
+          <bufferAttribute attach="attributes-color" args={[starColors, 3]} />
+        </bufferGeometry>
+        <pointsMaterial
+          size={mobile ? 0.16 : 0.12}
+          map={starTexture}
+          vertexColors
+          transparent
+          opacity={0.85}
+          blending={THREE.AdditiveBlending}
+          depthWrite={false}
+          sizeAttenuation
+        />
+      </points>
+
+      <points ref={dustRef}>
+        <bufferGeometry>
+          <bufferAttribute attach="attributes-position" args={[dustPositions, 3]} />
+          <bufferAttribute attach="attributes-color" args={[dustColors, 3]} />
+        </bufferGeometry>
+        <pointsMaterial
+          size={mobile ? 0.26 : 0.22}
+          map={starTexture}
+          vertexColors
+          transparent
+          opacity={0.35}
+          blending={THREE.AdditiveBlending}
+          depthWrite={false}
+          sizeAttenuation
+        />
+      </points>
+    </>
   );
 }
 
@@ -131,7 +200,7 @@ function track(p: number, stops: [number, number][]) {
  */
 function EclipseRing({ intensity }: { intensity: number }) {
   const ringTexture = useMemo(() => {
-    const size = 512;
+    const size = 1024;
     const canvas = document.createElement("canvas");
     canvas.width = size;
     canvas.height = size;
@@ -148,7 +217,7 @@ function EclipseRing({ intensity }: { intensity: number }) {
         const dy = y - cy;
         const dist = Math.sqrt(dx * dx + dy * dy);
 
-        if (dist >= limbRadius - 4 && dist < limbRadius + 36) {
+        if (dist >= limbRadius - 4 && dist < limbRadius + 42) {
           const outwardDist = Math.max(0, dist - limbRadius);
           const core = Math.exp(-Math.pow(outwardDist / 3.8, 2.0));
           const glow = Math.exp(-Math.pow(outwardDist / 16.0, 1.5)) * 0.6;
@@ -204,7 +273,7 @@ function RealMoon({ mobile }: { mobile: boolean }) {
     const d = Math.min(dt, 0.05);
     const time = state.clock.elapsedTime;
     const intro = scrollState.introPhase;
-    const introOpacity = Math.max(0.85, scrollState.introMoonOpacity);
+    const introOpacity = scrollState.introMoonOpacity;
 
     // 1. Intro sequence
     if (intro !== "done") {
@@ -264,7 +333,7 @@ function RealMoon({ mobile }: { mobile: boolean }) {
     }
 
     if (ambientLightRef.current) {
-      ambientLightRef.current.intensity = 0.02;
+      ambientLightRef.current.intensity = 0.015;
     }
 
     const ptrX = scrollState.pointerX * (mobile ? 0.012 : 0.02);
@@ -364,132 +433,110 @@ function RealMoon({ mobile }: { mobile: boolean }) {
     const baseSunY = 0.6;
     const baseSunZ = 1.5;
 
-    // 2. Passes chapter timeline (Continuous orbit across 4 passes: General, VIP, Couple General, Couple VIP)
+    // 2. PASSES TIMELINE (Mobile Vertical Floating Choreography)
     const passGx = mobile
       ? 0.0
       : track(pt, [
-          [0.0, -0.48], // General (Standard): Left
-          [0.20, -0.48],
-          [0.25, 0.0],
-          [0.32, 0.48], // VIP Access: Right
-          [0.48, 0.48],
-          [0.53, 0.0],
-          [0.60, -0.48], // Couple General: Left
-          [0.74, -0.48],
-          [0.80, 0.0], // Couple VIP: Centered
+          [0.0, -0.48], // Standard: Moon on Left (Text on Right)
+          [0.35, -0.48],
+          [0.45, 0.0], // Transition
+          [0.55, 0.48], // VIP: Moon on Right (Text on Left)
+          [0.7, 0.48],
+          [0.8, 0.0], // Table Orbit: Central iconic eclipse framing
           [1.0, 0.0],
         ]);
 
     const passGy = mobile
       ? track(pt, [
-          [0.0, 0.28], // General on mobile
-          [0.20, 0.28],
-          [0.32, 0.22], // VIP on mobile
-          [0.48, 0.22],
-          [0.60, 0.28], // Couple General on mobile
-          [0.74, 0.28],
-          [0.82, 0.16], // Couple VIP Eclipse on mobile
+          [0.0, 0.28], // Standard on mobile: Floats in upper viewport above Standard card
+          [0.35, 0.28],
+          [0.45, 0.24], // Transition
+          [0.55, 0.22], // VIP on mobile: Sits gracefully in upper-mid
+          [0.7, 0.22],
+          [0.8, 0.16], // Table Orbit on mobile: Centers right behind Eclipse
           [1.0, 0.16],
         ])
       : track(pt, [
           [0.0, -0.02],
-          [0.20, -0.02],
-          [0.32, 0.02],
-          [0.48, 0.02],
-          [0.60, -0.02],
-          [0.74, -0.02],
-          [0.82, 0.0],
+          [0.25, -0.02],
+          [0.6, 0.02],
+          [0.85, 0.02],
           [1.0, 0.0],
         ]);
 
-    // Scale progression
+    // Restrained scale progression
     const passScale = mobile
       ? track(pt, [
-          [0.0, 0.62],
-          [0.20, 0.64],
-          [0.32, 0.70],
-          [0.48, 0.72],
-          [0.60, 0.64],
-          [0.74, 0.66],
-          [0.82, 0.80], // Couple VIP Eclipse
-          [1.0, 0.72],
+          [0.0, 0.62], // Standard: 62% scale on mobile
+          [0.35, 0.65],
+          [0.55, 0.70], // VIP: 70% scale on mobile
+          [0.7, 0.72],
+          [0.85, 0.80], // Table Orbit: 80% scale for dramatic Eclipse
+          [1.0, 0.70],
         ])
       : track(pt, [
-          [0.0, 0.88],
-          [0.20, 0.90],
-          [0.32, 0.98],
-          [0.48, 1.02],
-          [0.60, 0.90],
-          [0.74, 0.92],
-          [0.82, 1.25], // Couple VIP Eclipse
-          [1.0, 0.92],
+          [0.0, 0.88], // Standard: 42-44vw
+          [0.35, 0.92],
+          [0.55, 1.0], // VIP: 46-48vw
+          [0.7, 1.05],
+          [0.85, 1.25], // Table Orbit: 54-58vw
+          [1.0, 0.9],
         ]);
 
-    // Virtual Orbital Light Path
+    // Virtual Orbital Light Path (Inward grazing front-side angles for Standard/VIP, solar backlight for Table Orbit)
     const passLightX = track(pt, [
-      [0.0, mobile ? 2.2 : 2.8], // General: Moon Left -> Light Right
-      [0.20, mobile ? 2.2 : 2.8],
-      [0.26, 0.0],
-      [0.32, mobile ? -2.2 : -2.8], // VIP: Moon Right -> Light Left
-      [0.48, mobile ? -2.2 : -2.8],
-      [0.54, 0.0],
-      [0.60, mobile ? 2.2 : 2.8], // Couple General: Moon Left -> Light Right
-      [0.74, mobile ? 2.2 : 2.8],
-      [0.80, 0.0], // Couple VIP: Direct Solar Backlight
-      [1.0, 0.0],
+      [0.0, mobile ? 2.2 : 2.8], // Standard: Moon on Left -> Light from Right-Front illuminating crater face
+      [0.35, mobile ? 2.2 : 2.8],
+      [0.45, 0.0], // Transition
+      [0.55, mobile ? -2.2 : -2.8], // VIP: Moon on Right -> Light from Left-Front illuminating crater face
+      [0.7, mobile ? -2.2 : -2.8],
+      [0.8, 0.0], // Table Orbit: Direct Solar Backlight
+      [1.0, 3.2],
     ]);
 
     const passLightY = track(pt, [
       [0.0, 0.5],
-      [0.20, 0.5],
-      [0.35, 0.5],
-      [0.60, 0.5],
-      [0.82, 0.8],
+      [0.23, 0.5],
+      [0.55, 0.5],
+      [0.86, 0.8],
       [1.0, 0.6],
     ]);
 
     const passLightZ = track(pt, [
       [0.0, 1.6],
-      [0.20, 1.6],
-      [0.26, 0.5],
-      [0.32, 1.6], // VIP
-      [0.48, 1.6],
-      [0.54, 0.5],
-      [0.60, 1.6], // Couple General
-      [0.74, 1.6],
-      [0.80, -1.0], // Transition to eclipse
-      [0.86, -3.8], // Couple VIP: Solar eclipse beam from behind
+      [0.23, 1.6], // Standard: Raking front angle revealing rich crater depth
+      [0.42, 0.5], // Transition
+      [0.55, 1.6], // VIP: Rich relief raking front angle
+      [0.72, -1.0], // Transition to eclipse
+      [0.86, -3.8], // Table Orbit: Solar eclipse beam from behind
       [1.0, 1.5],
     ]);
 
     const passLightIntensity = track(pt, [
       [0.0, 5.0],
-      [0.18, 6.2],
-      [0.26, 1.2],
-      [0.35, 6.5],
-      [0.52, 1.2],
-      [0.65, 6.2],
-      [0.78, 1.5],
-      [0.86, 8.5], // Couple VIP: Intense solar rim
+      [0.23, 6.2], // Standard: High-contrast crater profile
+      [0.39, 0.4], // Void 1
+      [0.55, 6.5], // VIP: High-contrast crater profile
+      [0.71, 0.4], // Void 2
+      [0.86, 8.5], // Table Orbit: Intense silver rim
       [1.0, 5.5],
     ]);
 
-    // Corona Ring Intensity (Active during Couple VIP eclipse)
+    // Corona Ring Intensity (Only active during Table Orbit eclipse)
     const passEclipseIntensity = track(pt, [
       [0.0, 0.0],
-      [0.76, 0.0],
-      [0.82, 0.4],
-      [0.88, 1.0], // Silver rim corona
-      [0.96, 0.4],
+      [0.55, 0.0],
+      [0.71, 0.1],
+      [0.86, 1.0], // Table Orbit: Silver rim corona
+      [0.94, 0.6],
       [1.0, 0.0],
     ]);
 
-    // Crater Ridge Specular Highlight
-    const isNearP1 = Math.abs(pt - 0.15) < 0.035;
-    const isNearP2 = Math.abs(pt - 0.40) < 0.035;
-    const isNearP3 = Math.abs(pt - 0.67) < 0.035;
-    const isNearP4 = Math.abs(pt - 0.88) < 0.035;
-    const craterGlint = isNearP1 || isNearP2 || isNearP3 || isNearP4 ? 2.5 : 0;
+    // Crater Ridge Specular Highlight (Feedback glint when locked into a checkpoint)
+    const isNearP1 = Math.abs(pt - 0.23) < 0.035;
+    const isNearP2 = Math.abs(pt - 0.55) < 0.035;
+    const isNearP3 = Math.abs(pt - 0.86) < 0.035;
+    const craterGlint = isNearP1 || isNearP2 || isNearP3 ? 2.5 : 0;
 
     if (craterHighlight.current) {
       craterHighlight.current.intensity = THREE.MathUtils.damp(
@@ -498,38 +545,36 @@ function RealMoon({ mobile }: { mobile: boolean }) {
         6.0,
         d,
       );
-      if (isNearP1 || isNearP3) craterHighlight.current.position.set(0.6, 0.2, 0.8);
+      if (isNearP1) craterHighlight.current.position.set(0.6, 0.2, 0.8);
       else if (isNearP2) craterHighlight.current.position.set(-0.6, 0.2, 0.8);
-      else if (isNearP4) craterHighlight.current.position.set(0.0, 0.65, 0.8);
+      else if (isNearP3) craterHighlight.current.position.set(0.0, 0.65, 0.8);
     }
 
     const passCamZ = mobile
       ? track(pt, [
           [0.0, 4.4],
-          [0.20, 4.4],
-          [0.35, 4.3],
-          [0.60, 4.4],
+          [0.23, 4.4],
+          [0.55, 4.3],
           [0.86, 4.2],
           [1.0, 4.4],
         ])
       : track(pt, [
           [0.0, 3.8],
-          [0.20, 3.8],
-          [0.35, 3.55], // VIP
-          [0.60, 3.8], // Couple General
-          [0.86, 3.7], // Couple VIP
+          [0.23, 3.8],
+          [0.55, 3.55], // VIP: 5-8% closer
+          [0.86, 3.7], // Table Orbit
           [1.0, 3.8],
         ]);
 
-    // 3. Unified Blended Targets
+    // 3. Unified Coordinates
     const targetCamX = THREE.MathUtils.lerp(baseCamX, 0, blend) + ptrX;
     const targetCamY = THREE.MathUtils.lerp(baseCamY, 0, blend) - ptrY;
     const targetCamZ = THREE.MathUtils.lerp(baseCamZ, passCamZ, blend);
 
-    const dampCam = mobile ? 6.0 : 4.5;
-    const dampPos = mobile ? 6.0 : 4.5;
-    const dampScale = mobile ? 5.5 : 4.0;
-    const dampRot = mobile ? 5.0 : 3.5;
+    const dampCam = mobile ? 6.5 : 5.0;
+    const dampPos = mobile ? 6.8 : 4.8;
+    const dampScale = mobile ? 6.2 : 4.6;
+    const dampRot = mobile ? 5.5 : 4.2;
 
     camera.position.x = THREE.MathUtils.damp(camera.position.x, targetCamX, dampCam, d);
     camera.position.y = THREE.MathUtils.damp(camera.position.y, targetCamY, dampCam, d);
@@ -598,7 +643,7 @@ function RealMoon({ mobile }: { mobile: boolean }) {
 
     // Earthshine fill light (soft celestial shadow illumination)
     if (earthshineLight.current) {
-      earthshineLight.current.intensity = 0.35;
+      earthshineLight.current.intensity = 0.32;
     }
 
     if (backRimLight.current) {
@@ -652,7 +697,7 @@ function RealMoon({ mobile }: { mobile: boolean }) {
 
   return (
     <>
-      <ambientLight ref={ambientLightRef} intensity={0.02} color="#0d111a" />
+      <ambientLight ref={ambientLightRef} intensity={0.015} color="#0d111a" />
 
       {/* Primary Key Light (Sun) */}
       <directionalLight
@@ -666,7 +711,7 @@ function RealMoon({ mobile }: { mobile: boolean }) {
       <directionalLight
         ref={earthshineLight}
         position={[-3.0, -1.0, 2.0]}
-        intensity={0.35}
+        intensity={0.32}
         color="#222c42"
       />
 
@@ -686,7 +731,7 @@ function RealMoon({ mobile }: { mobile: boolean }) {
 
       <group ref={group}>
         <Suspense fallback={null}>
-          <CustomMoonModel innerRef={moonMesh} />
+          <CustomMoonModel innerRef={moonMesh} mobile={mobile} />
           <EclipseRing intensity={eclipseVal} />
         </Suspense>
       </group>
@@ -705,12 +750,11 @@ export default function MoonScene() {
 
   return (
     <Canvas
-      dpr={mobile ? 1 : [1, 1.5]}
+      dpr={mobile ? [1, 1.4] : [1, 1.8]}
       gl={{
         antialias: !mobile,
         alpha: true,
         powerPreference: "high-performance",
-        stencil: false,
       }}
       camera={{ position: [0, 0, 4.2], fov: 40 }}
       style={{ pointerEvents: "none" }}
