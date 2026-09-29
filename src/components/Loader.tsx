@@ -145,7 +145,7 @@ export function Loader({ onDone }: { onDone: () => void }) {
             opacity: isRauschVisible ? 1 : 0,
           }}
         >
-          HYDERABAD · ONE DAY ONLY
+          HYDERABAD · OCTOBER 11 · ONE DAY ONLY
         </div>
       </div>
     </div>

@@ -120,7 +120,7 @@ export function AdminPage() {
     const token = booking.ticket_token || booking.purchase_id;
     const passUrl = `${window.location.origin}/p/${token}`;
 
-    const message = `✦ *RAUSCH x PHANTOM · CELESTIAL PASS APPROVED* ✦\n\nHi *${booking.full_name || "Attendee"}*,\nYour booking for *RAUSCH x PHANTOM* (Hyderabad · TOS Club & Lounge) has been verified and confirmed!\n\n🎟️ *Pass Tier*: ${passName}\n🆔 *Purchase ID*: ${booking.purchase_id}\n💰 *Amount Paid*: ₹${booking.final_amount}\n\n📲 *View & Download Your Digital Pass with Gate QR Code*:\n${passUrl}\n\n⚠️ *Gate Entry Rules*:\n• Present this Digital QR Pass at the venue scanner gate\n• Stag entry rules apply • Age: 16-24 only • Non-transferable\n\nSee you under the lunar lights! 🌙\n— *RAUSCH x PHANTOM HYDERABAD*`;
+    const message = `✦ *RAUSCH x PHANTOM · CELESTIAL PASS APPROVED* ✦\n\nHi *${booking.full_name || "Attendee"}*,\nYour booking for *RAUSCH x PHANTOM* (Hyderabad · TOS Club & Lounge) has been verified and confirmed!\n\n🎟️ *Pass Tier*: ${passName}\n📅 *Date*: Sunday, October 11, 2026\n🆔 *Purchase ID*: ${booking.purchase_id}\n💰 *Amount Paid*: ₹${booking.final_amount}\n\n📲 *View & Download Your Digital Pass with Gate QR Code*:\n${passUrl}\n\n⚠️ *Gate Entry Rules*:\n• Present this Digital QR Pass at the venue scanner gate on Oct 11\n• Stag entry rules apply • Age: 16-24 only • Non-transferable\n\nSee you under the lunar lights on October 11! 🌙\n— *RAUSCH x PHANTOM HYDERABAD*`;
 
     return `https://wa.me/${fullPhone}?text=${encodeURIComponent(message)}`;
   };

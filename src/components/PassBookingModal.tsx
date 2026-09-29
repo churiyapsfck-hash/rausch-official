@@ -69,7 +69,7 @@ export function PassBookingModal({ isOpen, onClose, initialTier = "general" }: P
     if (initialTier) setTier(initialTier);
   }, [initialTier]);
 
-  const basePrice = PASS_PRICING[tier]?.price || 1399;
+  const basePrice = PASS_PRICING[tier]?.price || 1299;
   const finalPrice = discountPercent > 0 ? Math.round(basePrice * (1 - discountPercent / 100)) : basePrice;
 
   // Handle Google Auth

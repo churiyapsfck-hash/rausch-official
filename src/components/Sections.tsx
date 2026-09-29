@@ -159,7 +159,7 @@ export function Hero() {
           <Reveal delay={400}>
             <div className="mt-8 flex flex-col sm:flex-row sm:items-center gap-6">
               <p className="font-sans text-xs tracking-[0.24em] text-muted-foreground uppercase leading-relaxed max-w-md">
-                The biggest teen party ever witnessed · Hyderabad
+                OCTOBER 11 · The biggest teen party ever witnessed · Hyderabad
               </p>
             </div>
           </Reveal>
@@ -171,7 +171,7 @@ export function Hero() {
         style={{ opacity: 1 - t * 1.5 }}
       >
         <span className="font-mono text-[9px] uppercase tracking-[0.3em] text-muted-foreground/80">
-          Chapter I · Hyderabad
+          Chapter I · October 11 · Hyderabad
         </span>
 
         <div className="flex items-center gap-4">
@@ -195,7 +195,7 @@ export function MarqueeStrip() {
       <div className="flex w-max animate-drift gap-16 font-mono text-[10px] uppercase tracking-[0.4em] text-muted-foreground/50">
         {[1, 2, 3].map((i) => (
           <span key={i} className="flex items-center gap-16">
-            <span>HYDERABAD</span>
+            <span>OCTOBER 11 · HYDERABAD</span>
             <span className="text-silver/40">✦</span>
             <span>UNLIMITED FOOD & MOCKTAILS</span>
             <span className="text-silver/40">✦</span>
@@ -388,7 +388,7 @@ export function Passes() {
                 GENERAL
               </h2>
               <div className="text-display mt-3 text-4xl sm:text-5xl font-light text-silver tracking-tight">
-                ₹1,399
+                ₹1,299
               </div>
               <div className="mt-6 space-y-2 font-mono text-[10px] sm:text-xs uppercase tracking-[0.22em] text-foreground/80 flex flex-col items-end">
                 <div>MAIN FLOOR ACCESS</div>
@@ -456,7 +456,7 @@ export function Passes() {
                 COUPLE GENERAL
               </h2>
               <div className="text-display mt-3 text-4xl sm:text-5xl font-light text-silver tracking-tight">
-                ₹2,649
+                ₹2,549
               </div>
               <div className="mt-6 space-y-2 font-mono text-[10px] sm:text-xs uppercase tracking-[0.22em] text-foreground/80 flex flex-col items-end">
                 <div>2X GENERAL PASSES (1 GUY + 1 GIRL)</div>
@@ -576,10 +576,10 @@ export function VenueSection() {
             </div>
             <div className="border-l border-white/15 pl-5">
               <div className="font-mono text-[10px] uppercase tracking-widest text-silver">
-                JACK OF TIMINGS
+                DATE & GATHERING
               </div>
               <div className="mt-1 font-sans text-xs text-muted-foreground">
-                Day Gathering Energy
+                Sunday, October 11 · Day Gathering
               </div>
             </div>
           </Reveal>
@@ -786,8 +786,8 @@ export function Footer() {
             className="h-14 sm:h-16 w-auto object-contain mb-3"
           />
           <p className="mt-3 font-sans text-xs text-muted-foreground max-w-sm leading-relaxed">
-            TOS Club & Lounge, Banjara Hills, Hyderabad. The biggest teen party ever witnessed.
-            General ₹1,399 · VIP ₹1,899 · Couples from ₹2,649. Unlimited food & mocktails.
+            TOS Club & Lounge, Banjara Hills, Hyderabad. October 11, 2026. The biggest teen party ever witnessed.
+            General ₹1,299 · VIP ₹1,899 · Couple General ₹2,549 · Couple VIP ₹3,649. Unlimited food & mocktails.
           </p>
           <a
             href={INSTAGRAM_URL}

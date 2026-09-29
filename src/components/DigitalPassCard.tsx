@@ -154,7 +154,7 @@ export function DigitalPassCard({ booking }: DigitalPassCardProps) {
 
           <div className="flex justify-between border-t border-white/10 pt-2 text-[10px] text-muted-foreground">
             <span className="flex items-center gap-1">
-              <Calendar className="h-3 w-3" /> ONE DAY GATHERING
+              <Calendar className="h-3 w-3" /> OCT 11 · DAY GATHERING
             </span>
             <span>UNLIMITED FOOD & MOCKTAILS</span>
           </div>
