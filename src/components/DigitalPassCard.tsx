@@ -85,7 +85,7 @@ export function DigitalPassCard({ booking }: DigitalPassCardProps) {
         {/* Top Header */}
         <div className="border-b border-white/10 p-6 pb-4">
           <div className="flex items-center justify-between">
-            <img src="/images/rausch-logo.png" alt="RAUSCH" className="h-6 w-auto object-contain" />
+            <img src="/images/rausch-logo.png" alt="RAUSCH x PHANTOM" className="h-9 w-auto object-contain" />
             <div
               className={`rounded-full px-3 py-1 font-mono text-[9px] font-semibold uppercase tracking-widest ${
                 isCheckedIn

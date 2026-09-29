@@ -112,7 +112,7 @@ export function GateScannerComponent({ accessToken }: GateScannerProps) {
         .eq("id", booking.id);
 
       setStatus("success");
-      setStatusMessage("ACCESS GRANTED — WELCOME TO RAUSCH");
+      setStatusMessage("ACCESS GRANTED — WELCOME TO RAUSCH x PHANTOM");
       setScannedBooking({ ...booking, status: "checked_in", checked_in_at: now });
       setCheckInCount((c) => c + 1);
       playSound("success");

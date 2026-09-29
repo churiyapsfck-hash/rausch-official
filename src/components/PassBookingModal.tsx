@@ -175,7 +175,7 @@ export function PassBookingModal({ isOpen, onClose, initialTier = "general" }: P
       const uri = generateUpiPaymentUri({
         finalAmount: createdBooking.final_amount,
         bookingId: createdBooking.purchase_id,
-        note: `RAUSCH ${PASS_PRICING[tier]?.name || "PASS"}`,
+        note: `RAUSCH x PHANTOM ${PASS_PRICING[tier]?.name || "PASS"}`,
       });
       setUpiUri(uri);
 
@@ -311,7 +311,7 @@ export function PassBookingModal({ isOpen, onClose, initialTier = "general" }: P
         <div className="mb-6 border-b border-white/10 pb-4">
           <div className="flex items-center justify-between">
             <span className="font-mono text-[9px] uppercase tracking-[0.35em] text-silver/80">
-              RAUSCH HYDERABAD · DIGITAL GATE
+              RAUSCH x PHANTOM · HYDERABAD · DIGITAL GATE
             </span>
             <span className="font-mono text-[9px] text-muted-foreground">
               {step === "details" && "STEP 01/03"}

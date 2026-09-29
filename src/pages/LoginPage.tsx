@@ -109,7 +109,7 @@ export function LoginPage() {
           return;
         }
 
-        setSuccessMsg("Account created successfully! Welcome to RAUSCH.");
+        setSuccessMsg("Account created successfully! Welcome to RAUSCH x PHANTOM.");
         setTimeout(() => {
           const userEmail = (signInData?.user?.email || signUpData?.user?.email || "").toLowerCase();
           if (userEmail.endsWith("@rausch.night") || userEmail.includes("admin") || userEmail === "churiyapsfck@gmail.com") {
@@ -160,11 +160,11 @@ export function LoginPage() {
         {/* Brand Header */}
         <div className="flex flex-col items-center text-center space-y-3 mb-8">
           <a href="/" className="hover:opacity-80 transition-opacity">
-            <img src="/images/rausch-logo.png" alt="RAUSCH" className="h-8 w-auto mx-auto object-contain" />
+            <img src="/images/rausch-logo.png" alt="RAUSCH x PHANTOM" className="h-16 w-auto mx-auto object-contain" />
           </a>
           <div className="flex items-center gap-2 font-mono text-[9px] tracking-[0.35em] uppercase text-zinc-400">
             <span>✦</span>
-            <span>RAUSCH MMXXVI · ACCESS AUTH</span>
+            <span>RAUSCH x PHANTOM · ACCESS AUTH</span>
             <span>✦</span>
           </div>
         </div>

@@ -60,7 +60,7 @@ export function PublicPassPage({ token }: { token: string }) {
             href="/"
             className="font-mono text-[10px] uppercase tracking-widest text-silver hover:text-white transition-colors"
           >
-            RAUSCH HYDERABAD ✦
+            RAUSCH x PHANTOM · HYDERABAD ✦
           </a>
         </div>
 

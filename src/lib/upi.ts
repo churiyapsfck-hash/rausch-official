@@ -57,7 +57,7 @@ export function validateUpiPayment({ upiId, amount }: { upiId: string; amount: n
 export function generateUpiPaymentUri({
   finalAmount,
   bookingId,
-  note = "RAUSCH Hyderabad Pass",
+  note = "RAUSCH x PHANTOM Pass",
   upiId = (typeof import.meta !== "undefined" && import.meta.env?.VITE_UPI_ID) ||
     (typeof process !== "undefined" && process.env?.VITE_UPI_ID) ||
     "7416265415@okbizaxis",
@@ -83,7 +83,7 @@ export function generateUpiPaymentUri({
   const transactionReference = cleanBookingId ? `RAU-${cleanBookingId}` : `RAU-${Date.now()}`;
 
   // Clean note (strip unsafe characters, emojis, &, #, ?, and unencoded symbols)
-  const cleanNote = note.replace(/[^a-zA-Z0-9 ]/g, "").trim() || "RAUSCH Pass";
+  const cleanNote = note.replace(/[^a-zA-Z0-9 ]/g, "").trim() || "RAUSCH x PHANTOM Pass";
 
   const params = new URLSearchParams({
     pa: upiId,

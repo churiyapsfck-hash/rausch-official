@@ -60,7 +60,7 @@ export function PurchasesPage() {
           <div>
             <div className="flex items-center gap-4">
               <a href="/" className="hover:opacity-80 transition-opacity">
-                <img src="/images/rausch-logo.png" alt="RAUSCH" className="h-7 w-auto object-contain" />
+                <img src="/images/rausch-logo.png" alt="RAUSCH x PHANTOM" className="h-10 w-auto object-contain" />
               </a>
               <span className="font-mono text-[9px] uppercase tracking-[0.35em] text-silver/80">
                 MY CELESTIAL PASSES

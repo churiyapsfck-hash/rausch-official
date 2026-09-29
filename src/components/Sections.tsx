@@ -72,8 +72,8 @@ export function Nav() {
           <a href="#top" className="flex items-center hover:opacity-80 transition-opacity">
             <img
               src="/images/rausch-logo.png"
-              alt="RAUSCH"
-              className="h-6 sm:h-7 w-auto object-contain"
+              alt="RAUSCH x PHANTOM"
+              className="h-9 sm:h-11 w-auto object-contain"
             />
           </a>
 
@@ -150,8 +150,8 @@ export function Hero() {
             <div className="mt-4 -ml-1 relative inline-block">
               <img
                 src="/images/rausch-logo.png"
-                alt="RAUSCH"
-                className="relative z-10 w-[88vw] sm:w-[74vw] md:w-[62vw] lg:w-[48rem] max-w-full h-auto object-contain select-none"
+                alt="RAUSCH x PHANTOM"
+                className="relative z-10 w-[72vw] sm:w-[50vw] md:w-[38vw] lg:w-[26rem] max-w-full h-auto object-contain select-none"
               />
             </div>
           </Reveal>
@@ -664,7 +664,7 @@ const RULES_DATA = [
     topic: "SAFETY",
     title: "Is alcohol permitted?",
     details:
-      "Strictly no alcohol. RAUSCH is an exclusive, safe party engineered for teens with unlimited gourmet food, craft mocktails, and professional security.",
+      "Strictly no alcohol. RAUSCH x PHANTOM is an exclusive, safe party engineered for teens with unlimited gourmet food, craft mocktails, and professional security.",
   },
 ];
 
@@ -782,8 +782,8 @@ export function Footer() {
         <div>
           <img
             src="/images/rausch-logo.png"
-            alt="RAUSCH"
-            className="h-9 sm:h-11 w-auto object-contain mb-3"
+            alt="RAUSCH x PHANTOM"
+            className="h-14 sm:h-16 w-auto object-contain mb-3"
           />
           <p className="mt-3 font-sans text-xs text-muted-foreground max-w-sm leading-relaxed">
             TOS Club & Lounge, Banjara Hills, Hyderabad. The biggest teen party ever witnessed.

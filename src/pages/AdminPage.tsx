@@ -120,7 +120,7 @@ export function AdminPage() {
     const token = booking.ticket_token || booking.purchase_id;
     const passUrl = `${window.location.origin}/p/${token}`;
 
-    const message = `✦ *RAUSCH MMXXVI · CELESTIAL PASS APPROVED* ✦\n\nHi *${booking.full_name || "Attendee"}*,\nYour booking for *RAUSCH* (Hyderabad · TOS Club & Lounge) has been verified and confirmed!\n\n🎟️ *Pass Tier*: ${passName}\n🆔 *Purchase ID*: ${booking.purchase_id}\n💰 *Amount Paid*: ₹${booking.final_amount}\n\n📲 *View & Download Your Digital Pass with Gate QR Code*:\n${passUrl}\n\n⚠️ *Gate Entry Rules*:\n• Present this Digital QR Pass at the venue scanner gate\n• Stag entry rules apply • Age: 16-24 only • Non-transferable\n\nSee you under the lunar lights! 🌙\n— *RAUSCH HYDERABAD*`;
+    const message = `✦ *RAUSCH x PHANTOM · CELESTIAL PASS APPROVED* ✦\n\nHi *${booking.full_name || "Attendee"}*,\nYour booking for *RAUSCH x PHANTOM* (Hyderabad · TOS Club & Lounge) has been verified and confirmed!\n\n🎟️ *Pass Tier*: ${passName}\n🆔 *Purchase ID*: ${booking.purchase_id}\n💰 *Amount Paid*: ₹${booking.final_amount}\n\n📲 *View & Download Your Digital Pass with Gate QR Code*:\n${passUrl}\n\n⚠️ *Gate Entry Rules*:\n• Present this Digital QR Pass at the venue scanner gate\n• Stag entry rules apply • Age: 16-24 only • Non-transferable\n\nSee you under the lunar lights! 🌙\n— *RAUSCH x PHANTOM HYDERABAD*`;
 
     return `https://wa.me/${fullPhone}?text=${encodeURIComponent(message)}`;
   };
@@ -131,7 +131,7 @@ export function AdminPage() {
     const fullPhone = phone.length === 10 ? `91${phone}` : phone;
     const passName = (booking.pass_type || "General").replace("_", " ").toUpperCase();
 
-    const message = `✦ *RAUSCH HYDERABAD · PAYMENT VERIFICATION UPDATE* ✦\n\nHi *${booking.full_name || "Attendee"}*,\nWe could not verify your payment for *RAUSCH* (${passName} · Ref: ${booking.purchase_id}).\n\n❌ *Reason*: The transaction reference (UTR) or screenshot provided could not be matched with bank merchant records.\n\n🔄 *Next Steps*:\nIf this was an error or you have a valid bank transaction reference, please log into https://rausch.ironoak.site or contact @rausch.hyd on Instagram with your bank debit proof for manual review.\n\n— *RAUSCH HYDERABAD*`;
+    const message = `✦ *RAUSCH x PHANTOM HYDERABAD · PAYMENT VERIFICATION UPDATE* ✦\n\nHi *${booking.full_name || "Attendee"}*,\nWe could not verify your payment for *RAUSCH x PHANTOM* (${passName} · Ref: ${booking.purchase_id}).\n\n❌ *Reason*: The transaction reference (UTR) or screenshot provided could not be matched with bank merchant records.\n\n🔄 *Next Steps*:\nIf this was an error or you have a valid bank transaction reference, please log into https://rausch.ironoak.site or contact @rausch.hyd on Instagram with your bank debit proof for manual review.\n\n— *RAUSCH x PHANTOM HYDERABAD*`;
 
     return `https://wa.me/${fullPhone}?text=${encodeURIComponent(message)}`;
   };
@@ -416,7 +416,7 @@ export function AdminPage() {
           <div>
             <div className="flex items-center gap-3">
               <a href="/" className="hover:opacity-80 transition-opacity">
-                <img src="/images/rausch-logo.png" alt="RAUSCH" className="h-7 w-auto object-contain" />
+                <img src="/images/rausch-logo.png" alt="RAUSCH x PHANTOM" className="h-10 w-auto object-contain" />
               </a>
               <span className="rounded-full bg-white/10 px-2.5 py-0.5 font-mono text-[9px] uppercase tracking-widest text-silver">
                 CTRL CENTER

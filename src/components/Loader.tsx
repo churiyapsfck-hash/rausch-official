@@ -135,8 +135,8 @@ export function Loader({ onDone }: { onDone: () => void }) {
       >
         <img
           src="/images/rausch-logo.png"
-          alt="RAUSCH"
-          className="w-[84vw] sm:w-[58vw] md:w-[44vw] max-w-[480px] h-auto object-contain select-none"
+          alt="RAUSCH x PHANTOM"
+          className="w-[70vw] sm:w-[48vw] md:w-[32vw] max-w-[340px] max-h-[50vh] h-auto object-contain select-none"
         />
 
         <div

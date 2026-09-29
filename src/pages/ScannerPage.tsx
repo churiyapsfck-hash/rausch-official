@@ -116,7 +116,7 @@ export function ScannerPage() {
 
       setResult({
         status: "success",
-        message: "ACCESS GRANTED — WELCOME TO RAUSCH",
+        message: "ACCESS GRANTED — WELCOME TO RAUSCH x PHANTOM",
         booking: { ...booking, status: "checked_in", checked_in_at: now },
       });
     } catch (err: any) {
