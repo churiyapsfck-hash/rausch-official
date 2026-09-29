@@ -15,22 +15,22 @@ export interface UpiGeneratorParams {
 export const PASS_PRICING: Record<string, { name: string; price: number; category: "single" | "couple" }> = {
   general: {
     name: "GENERAL (STANDARD)",
-    price: 1299,
+    price: 1199,
     category: "single",
   },
   vip: {
     name: "VIP ACCESS",
-    price: 1899,
+    price: 1799,
     category: "single",
   },
   couple_general: {
     name: "COUPLE GENERAL",
-    price: 2549,
+    price: 2299,
     category: "couple",
   },
   couple_vip: {
     name: "COUPLE VIP",
-    price: 3649,
+    price: 3399,
     category: "couple",
   },
 };

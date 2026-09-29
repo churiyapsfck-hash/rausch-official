@@ -388,7 +388,7 @@ export function Passes() {
                 GENERAL
               </h2>
               <div className="text-display mt-3 text-4xl sm:text-5xl font-light text-silver tracking-tight">
-                ₹1,299
+                ₹1,199
               </div>
               <div className="mt-6 space-y-2 font-mono text-[10px] sm:text-xs uppercase tracking-[0.22em] text-foreground/80 flex flex-col items-end">
                 <div>MAIN FLOOR ACCESS</div>
@@ -422,7 +422,7 @@ export function Passes() {
                 VIP ACCESS
               </h2>
               <div className="text-display mt-3 text-4xl sm:text-5xl font-light text-silver tracking-tight">
-                ₹1,899
+                ₹1,799
               </div>
               <div className="mt-6 space-y-2 font-mono text-[10px] sm:text-xs uppercase tracking-[0.22em] text-foreground/80 flex flex-col items-start">
                 <div>EXCLUSIVE VIP LOUNGE ACCESS</div>
@@ -456,7 +456,7 @@ export function Passes() {
                 COUPLE GENERAL
               </h2>
               <div className="text-display mt-3 text-4xl sm:text-5xl font-light text-silver tracking-tight">
-                ₹2,549
+                ₹2,299
               </div>
               <div className="mt-6 space-y-2 font-mono text-[10px] sm:text-xs uppercase tracking-[0.22em] text-foreground/80 flex flex-col items-end">
                 <div>2X GENERAL PASSES (1 GUY + 1 GIRL)</div>
@@ -490,7 +490,7 @@ export function Passes() {
                 COUPLE VIP
               </h2>
               <div className="text-display mt-3 text-4xl sm:text-5xl font-light text-silver">
-                ₹3,649
+                ₹3,399
               </div>
               <div className="mt-6 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 font-mono text-[10px] sm:text-xs uppercase tracking-[0.22em] text-silver/80 max-w-xl mx-auto">
                 <span>2X VIP ACCESS PASSES</span>
@@ -787,7 +787,7 @@ export function Footer() {
           />
           <p className="mt-3 font-sans text-xs text-muted-foreground max-w-sm leading-relaxed">
             TOS Club & Lounge, Banjara Hills, Hyderabad. October 11, 2026. The biggest teen party ever witnessed.
-            General ₹1,299 · VIP ₹1,899 · Couple General ₹2,549 · Couple VIP ₹3,649. Unlimited food & mocktails.
+            General ₹1,199 · VIP ₹1,799 · Couple General ₹2,299 · Couple VIP ₹3,399. Unlimited food & mocktails.
           </p>
           <a
             href={INSTAGRAM_URL}
