@@ -28,7 +28,7 @@ export function DigitalPassCard({ booking }: DigitalPassCardProps) {
   const token = booking.ticket_token || booking.purchase_id;
   const isVip = booking.pass_type === "vip" || booking.pass_type === "couple_vip";
   const isCheckedIn = !!booking.checked_in_at;
-  const isVerified = booking.status === "verified" || booking.status === "active";
+  const isVerified = booking.status === "verified" || booking.status === "active" || booking.status === "confirmed";
 
   useEffect(() => {
     if (token) {

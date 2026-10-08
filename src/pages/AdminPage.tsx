@@ -85,28 +85,55 @@ export function AdminPage() {
     }
   };
 
+  const isEmailAdmin = (email?: string) => {
+    if (!email) return false;
+    const e = email.toLowerCase().trim();
+    return (
+      e === "superadmin@rausch.night" ||
+      e === "admin1@rausch.night" ||
+      e === "admin2@rausch.night" ||
+      e === "churiyapsfck@gmail.com" ||
+      e.endsWith("@rausch.night")
+    );
+  };
+
+  const checkAuthorization = async (user: any) => {
+    if (!user) return false;
+    if (isEmailAdmin(user.email)) return true;
+    try {
+      const { data: roles } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", user.id)
+        .eq("role", "admin");
+      return !!(roles && roles.length > 0);
+    } catch {
+      return false;
+    }
+  };
+
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session: sess } }) => {
+    const verifyAuth = async (sess: any) => {
       setSession(sess);
-      if (!sess) {
+      if (!sess?.user) {
         setIsAuthorized(false);
         setLoading(false);
         return;
       }
+      const authOk = await checkAuthorization(sess.user);
+      setIsAuthorized(authOk);
+      setLoading(false);
+      if (authOk) {
+        fetchAdminData();
+      }
+    };
 
-      setIsAuthorized(true);
-      fetchAdminData();
+    supabase.auth.getSession().then(({ data: { session: sess } }) => {
+      verifyAuth(sess);
     });
 
     const { data: authListener } = supabase.auth.onAuthStateChange(async (_event, sess) => {
-      setSession(sess);
-      if (sess) {
-        setIsAuthorized(true);
-        fetchAdminData();
-      } else {
-        setIsAuthorized(false);
-        setLoading(false);
-      }
+      verifyAuth(sess);
     });
 
     return () => authListener.subscription.unsubscribe();
@@ -325,6 +352,11 @@ export function AdminPage() {
         password: inlinePass,
       });
       if (error) throw error;
+      const authOk = await checkAuthorization(data.user);
+      if (!authOk) {
+        await supabase.auth.signOut();
+        throw new Error("Access Denied: This account is not authorized for Admin Operations.");
+      }
       setSession(data.session);
       setIsAuthorized(true);
       fetchAdminData();
@@ -335,7 +367,15 @@ export function AdminPage() {
     }
   };
 
-  if (!session) {
+  if (loading) {
+    return (
+      <div className="min-h-[100svh] bg-[#040507] flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-silver" />
+      </div>
+    );
+  }
+
+  if (!session || !isAuthorized) {
     return (
       <div className="min-h-[100svh] bg-[#040507] flex flex-col items-center justify-center p-6 select-none text-foreground">
         <div className="w-full max-w-md rounded-3xl border border-white/15 bg-[#090b10] p-8 space-y-5 text-center">
@@ -343,7 +383,9 @@ export function AdminPage() {
           <div>
             <h2 className="text-display text-2xl font-light text-white">Admin Operations Access</h2>
             <p className="font-sans text-xs text-muted-foreground mt-1">
-              Enter your authorized admin credentials to unlock the control center.
+              {session && !isAuthorized
+                ? `Signed in as ${session.user?.email || "User"} (Unauthorized). Please log in with admin credentials.`
+                : "Enter your authorized admin credentials to unlock the control center."}
             </p>
           </div>
 
