@@ -12,7 +12,7 @@ export function GateScannerComponent({ accessToken }: GateScannerProps) {
 
   const [scanning, setScanning] = useState(false);
   const [lastScanned, setLastScanned] = useState<string>("");
-  const [status, setStatus] = useState<"idle" | "verifying" | "success" | "already" | "invalid">("idle");
+  const [status, setStatus] = useState<"idle" | "verifying" | "success" | "already" | "invalid" | "reset">("idle");
   const [statusMessage, setStatusMessage] = useState<string>("");
   const [scannedBooking, setScannedBooking] = useState<any>(null);
   const [manualCode, setManualCode] = useState("");
@@ -20,7 +20,9 @@ export function GateScannerComponent({ accessToken }: GateScannerProps) {
   const [resetting, setResetting] = useState(false);
   const isProcessingRef = useRef(false);
   const lastScannedTokenRef = useRef("");
-  const lastScanTimeRef = useRef(0);
+  const lastGuestNameRef = useRef("");
+  const ignoredTokenRef = useRef("");
+  const [ignoredNotice, setIgnoredNotice] = useState("");
 
   // Audio chimes
   const playSound = (type: "success" | "warning" | "error") => {
@@ -65,13 +67,6 @@ export function GateScannerComponent({ accessToken }: GateScannerProps) {
       return;
     }
 
-    const now = Date.now();
-    if (clean === lastScannedTokenRef.current && now - lastScanTimeRef.current < 4000) {
-      return;
-    }
-    lastScannedTokenRef.current = clean;
-    lastScanTimeRef.current = now;
-
     setStatus("verifying");
     setStatusMessage("Verifying pass with gate database...");
 
@@ -93,6 +88,9 @@ export function GateScannerComponent({ accessToken }: GateScannerProps) {
         playSound("error");
         return;
       }
+
+      lastScannedTokenRef.current = booking.ticket_token || booking.purchase_id || clean;
+      lastGuestNameRef.current = booking.full_name;
 
       if (booking.status === "declined") {
         setStatus("invalid");
@@ -148,8 +146,11 @@ export function GateScannerComponent({ accessToken }: GateScannerProps) {
         .eq("id", booking.id);
 
       if (error) throw error;
-      setStatus("success");
-      setStatusMessage("CHECK-IN REMOVED — Pass is active again and ready for entry");
+      lastScannedTokenRef.current = booking.ticket_token || booking.purchase_id || "";
+      lastGuestNameRef.current = booking.full_name;
+
+      setStatus("reset");
+      setStatusMessage(`CHECK-IN REMOVED FOR ${booking.full_name.toUpperCase()} — PASS IS NOW ACTIVE AGAIN`);
       setScannedBooking({ ...booking, status: "confirmed", checked_in_at: null });
       setCheckInCount((c) => Math.max(0, c - 1));
       playSound("success");
@@ -168,19 +169,40 @@ export function GateScannerComponent({ accessToken }: GateScannerProps) {
       const reader = new BrowserMultiFormatReader();
       codeReaderRef.current = reader;
 
-      await reader.decodeFromVideoDevice(
-        undefined,
-        videoRef.current!,
-        (result) => {
-          if (result) {
-            if (isProcessingRef.current) return;
-            isProcessingRef.current = true;
-            const text = result.getText();
-            stopCamera();
-            handleVerifyToken(text);
+      if (videoRef.current) {
+        // Enforce lock during warmup so no residual GPU/framebuffer frames trigger a false decode
+        isProcessingRef.current = true;
+        setTimeout(() => {
+          isProcessingRef.current = false;
+        }, 600);
+
+        await reader.decodeFromVideoDevice(
+          undefined,
+          videoRef.current,
+          (result) => {
+            if (result) {
+              if (isProcessingRef.current) return;
+              const text = result.getText();
+              const clean = text.trim().replace(/^.*\/p\//, "").replace(/^.*token=/, "");
+              if (!clean) return;
+
+              // Prevent re-scanning the attendee who was just processed
+              if (ignoredTokenRef.current && clean === ignoredTokenRef.current) {
+                setIgnoredNotice(
+                  `Previous pass for ${lastGuestNameRef.current || "attendee"} detected — point camera at NEXT attendee`
+                );
+                return;
+              }
+
+              isProcessingRef.current = true;
+              ignoredTokenRef.current = "";
+              setIgnoredNotice("");
+              stopCamera();
+              handleVerifyToken(clean);
+            }
           }
-        }
-      );
+        );
+      }
     } catch (err) {
       console.error("Camera access error:", err);
       setScanning(false);
@@ -195,11 +217,16 @@ export function GateScannerComponent({ accessToken }: GateScannerProps) {
       } catch (e) {}
       codeReaderRef.current = null;
     }
-    if (videoRef.current?.srcObject) {
+    if (videoRef.current) {
       try {
-        const stream = videoRef.current.srcObject as MediaStream;
-        stream.getTracks().forEach((track) => track.stop());
+        if (videoRef.current.srcObject) {
+          const stream = videoRef.current.srcObject as MediaStream;
+          stream.getTracks().forEach((track) => track.stop());
+        }
+        videoRef.current.pause();
         videoRef.current.srcObject = null;
+        videoRef.current.removeAttribute("src");
+        videoRef.current.load();
       } catch (e) {}
     }
     setScanning(false);
@@ -251,6 +278,21 @@ export function GateScannerComponent({ accessToken }: GateScannerProps) {
           <>
             {/* Viewfinder Target Reticle */}
             <div className="pointer-events-none absolute inset-12 border-2 border-dashed border-white/40 rounded-2xl animate-pulse" />
+            {ignoredNotice && (
+              <div className="absolute top-4 left-4 right-4 pointer-events-auto rounded-xl bg-amber-950/90 border border-amber-500/50 p-2.5 text-center text-amber-200 font-mono text-[10px] space-y-1 shadow-lg backdrop-blur">
+                <p>{ignoredNotice}</p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    ignoredTokenRef.current = "";
+                    setIgnoredNotice("");
+                  }}
+                  className="underline text-white hover:text-amber-300 font-semibold cursor-pointer block mx-auto"
+                >
+                  Tap here to allow re-scanning previous pass
+                </button>
+              </div>
+            )}
             <button
               onClick={stopCamera}
               className="absolute top-4 right-4 rounded-full bg-black/60 px-3 py-1.5 font-mono text-[10px] uppercase text-white hover:bg-black"
@@ -267,6 +309,8 @@ export function GateScannerComponent({ accessToken }: GateScannerProps) {
           className={`rounded-2xl border p-6 text-center space-y-3 transition-all animate-in fade-in ${
             status === "success"
               ? "border-emerald-500/40 bg-emerald-500/15 text-emerald-200"
+              : status === "reset"
+              ? "border-sky-500/40 bg-sky-500/15 text-sky-200"
               : status === "already"
               ? "border-amber-500/40 bg-amber-500/15 text-amber-200"
               : status === "verifying"
@@ -277,10 +321,12 @@ export function GateScannerComponent({ accessToken }: GateScannerProps) {
           <div className="flex items-center justify-center gap-2">
             {status === "verifying" && <Loader2 className="h-6 w-6 animate-spin" />}
             {status === "success" && <CheckCircle2 className="h-7 w-7 text-emerald-400" />}
+            {status === "reset" && <RotateCcw className="h-7 w-7 text-sky-400" />}
             {status === "already" && <AlertTriangle className="h-7 w-7 text-amber-400" />}
             {status === "invalid" && <XCircle className="h-7 w-7 text-red-400" />}
             <h4 className="text-display text-2xl font-light">
               {status === "success" && "VALID PASS · ACCESS GRANTED"}
+              {status === "reset" && "CHECK-IN REMOVED"}
               {status === "already" && "DUPLICATE SCAN WARNING"}
               {status === "invalid" && "INVALID PASS"}
               {status === "verifying" && "CHECKING GATE CLEARANCE..."}
@@ -289,7 +335,7 @@ export function GateScannerComponent({ accessToken }: GateScannerProps) {
 
           <p className="font-mono text-xs tracking-wider">{statusMessage}</p>
 
-              {scannedBooking && (
+          {scannedBooking && (
             <div className="mt-4 rounded-xl bg-black/30 p-4 text-left font-mono text-xs space-y-1.5 border border-white/10">
               <div className="flex justify-between">
                 <span className="text-muted-foreground">ATTENDEE:</span>
@@ -306,7 +352,7 @@ export function GateScannerComponent({ accessToken }: GateScannerProps) {
             </div>
           )}
 
-            {status === "already" && scannedBooking && (
+          {status === "already" && scannedBooking && (
             <button
               onClick={() => handleRemoveCheckIn(scannedBooking)}
               disabled={resetting}
@@ -329,10 +375,16 @@ export function GateScannerComponent({ accessToken }: GateScannerProps) {
           {status !== "idle" && status !== "verifying" && (
             <button
               onClick={() => {
+                ignoredTokenRef.current = lastScannedTokenRef.current;
                 isProcessingRef.current = false;
                 setStatus("idle");
                 setStatusMessage("");
                 setScannedBooking(null);
+                setIgnoredNotice(
+                  lastGuestNameRef.current
+                    ? `Previous pass for ${lastGuestNameRef.current} ignored to avoid repeat scan`
+                    : ""
+                );
                 startCamera();
               }}
               className="mt-4 w-full rounded-xl bg-white/10 hover:bg-white hover:text-black py-3 font-mono text-[10px] font-semibold uppercase tracking-widest text-white transition-all cursor-pointer"
@@ -347,6 +399,8 @@ export function GateScannerComponent({ accessToken }: GateScannerProps) {
       <form
         onSubmit={(e) => {
           e.preventDefault();
+          ignoredTokenRef.current = "";
+          setIgnoredNotice("");
           handleVerifyToken(manualCode);
         }}
         className="rounded-2xl border border-white/15 bg-[#090b10] p-6 space-y-3"

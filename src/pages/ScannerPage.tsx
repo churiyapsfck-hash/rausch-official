@@ -21,7 +21,9 @@ export function ScannerPage() {
   const codeReaderRef = useRef<any>(null);
   const isProcessingRef = useRef(false);
   const lastScannedTokenRef = useRef("");
-  const lastScanTimeRef = useRef(0);
+  const lastGuestNameRef = useRef("");
+  const ignoredTokenRef = useRef("");
+  const [ignoredNotice, setIgnoredNotice] = useState("");
 
   const checkGateAuth = async (user: any) => {
     if (!user) return false;
@@ -115,16 +117,35 @@ export function ScannerPage() {
       const selectedDeviceId = backCamera ? backCamera.deviceId : videoInputDevices[0]?.deviceId;
 
       if (videoRef.current) {
+        // Enforce lock during warmup so no residual GPU/framebuffer frames trigger a false decode
+        isProcessingRef.current = true;
+        setTimeout(() => {
+          isProcessingRef.current = false;
+        }, 600);
+
         await reader.decodeFromVideoDevice(
           selectedDeviceId,
           videoRef.current,
           (res, err) => {
             if (res) {
               if (isProcessingRef.current) return;
-              isProcessingRef.current = true;
               const text = res.getText();
+              const clean = text.trim().replace(/^.*\/p\//, "").replace(/^.*token=/, "");
+              if (!clean) return;
+
+              // Prevent re-scanning the attendee who was just processed
+              if (ignoredTokenRef.current && clean === ignoredTokenRef.current) {
+                setIgnoredNotice(
+                  `Previous pass for ${lastGuestNameRef.current || "attendee"} detected — point camera at NEXT attendee`
+                );
+                return;
+              }
+
+              isProcessingRef.current = true;
+              ignoredTokenRef.current = "";
+              setIgnoredNotice("");
               stopCamera();
-              handleVerifyToken(text);
+              handleVerifyToken(clean);
             }
           }
         );
@@ -144,11 +165,16 @@ export function ScannerPage() {
       } catch (e) {}
       codeReaderRef.current = null;
     }
-    if (videoRef.current?.srcObject) {
+    if (videoRef.current) {
       try {
-        const stream = videoRef.current.srcObject as MediaStream;
-        stream.getTracks().forEach((track) => track.stop());
+        if (videoRef.current.srcObject) {
+          const stream = videoRef.current.srcObject as MediaStream;
+          stream.getTracks().forEach((track) => track.stop());
+        }
+        videoRef.current.pause();
         videoRef.current.srcObject = null;
+        videoRef.current.removeAttribute("src");
+        videoRef.current.load();
       } catch (e) {}
     }
     setScanning(false);
@@ -164,13 +190,6 @@ export function ScannerPage() {
       isProcessingRef.current = false;
       return;
     }
-
-    const now = Date.now();
-    if (clean === lastScannedTokenRef.current && now - lastScanTimeRef.current < 4000) {
-      return;
-    }
-    lastScannedTokenRef.current = clean;
-    lastScanTimeRef.current = now;
 
     setLoading(true);
     setResult(null);
@@ -189,6 +208,9 @@ export function ScannerPage() {
         });
         return;
       }
+
+      lastScannedTokenRef.current = booking.ticket_token || booking.purchase_id || clean;
+      lastGuestNameRef.current = booking.full_name;
 
       if (booking.status === "declined") {
         setResult({
@@ -255,9 +277,12 @@ export function ScannerPage() {
 
       if (error) throw error;
 
+      lastScannedTokenRef.current = booking.ticket_token || booking.purchase_id || "";
+      lastGuestNameRef.current = booking.full_name;
+
       setResult({
-        status: "success",
-        message: "CHECK-IN REMOVED — Pass is active again and ready for entry",
+        status: "reset",
+        message: `CHECK-IN REMOVED FOR ${booking.full_name.toUpperCase()} — PASS IS NOW ACTIVE AGAIN`,
         booking: { ...booking, status: "confirmed", checked_in_at: null },
       });
     } catch (err: any) {
@@ -398,10 +423,25 @@ export function ScannerPage() {
 
           {scanning && (
             <div className="absolute inset-0 pointer-events-none flex flex-col items-center justify-between p-6">
-              <div className="w-full text-center">
+              <div className="w-full text-center space-y-2">
                 <span className="rounded-full bg-black/60 px-3 py-1 font-mono text-[10px] text-white backdrop-blur">
                   SCANNING QR...
                 </span>
+                {ignoredNotice && (
+                  <div className="pointer-events-auto mx-auto max-w-xs rounded-xl bg-amber-950/90 border border-amber-500/50 p-2.5 text-center text-amber-200 font-mono text-[10px] space-y-1 shadow-lg backdrop-blur">
+                    <p>{ignoredNotice}</p>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        ignoredTokenRef.current = "";
+                        setIgnoredNotice("");
+                      }}
+                      className="underline text-white hover:text-amber-300 font-semibold cursor-pointer block mx-auto"
+                    >
+                      Tap here to allow re-scanning previous pass
+                    </button>
+                  </div>
+                )}
               </div>
               <div className="h-48 w-48 rounded-2xl border-2 border-dashed border-emerald-400 animate-pulse" />
               <button
@@ -424,6 +464,8 @@ export function ScannerPage() {
         <form
           onSubmit={(e) => {
             e.preventDefault();
+            ignoredTokenRef.current = "";
+            setIgnoredNotice("");
             handleVerifyToken(tokenInput);
           }}
           className="flex gap-2"
@@ -450,6 +492,8 @@ export function ScannerPage() {
             className={`rounded-3xl border p-6 space-y-4 shadow-2xl transition-all ${
               result.status === "success"
                 ? "border-emerald-500/40 bg-emerald-950/30 text-emerald-200"
+                : result.status === "reset"
+                ? "border-sky-500/40 bg-sky-950/30 text-sky-200"
                 : result.status === "already_used"
                 ? "border-purple-500/40 bg-purple-950/30 text-purple-200"
                 : result.status === "pending"
@@ -460,6 +504,8 @@ export function ScannerPage() {
             <div className="flex items-center gap-3">
               {result.status === "success" ? (
                 <CheckCircle2 className="h-8 w-8 text-emerald-400" />
+              ) : result.status === "reset" ? (
+                <RotateCcw className="h-8 w-8 text-sky-400" />
               ) : result.status === "already_used" ? (
                 <AlertTriangle className="h-8 w-8 text-purple-400" />
               ) : (
@@ -515,9 +561,15 @@ export function ScannerPage() {
 
             <button
               onClick={() => {
+                ignoredTokenRef.current = lastScannedTokenRef.current;
                 isProcessingRef.current = false;
                 setResult(null);
                 setTokenInput("");
+                setIgnoredNotice(
+                  lastGuestNameRef.current
+                    ? `Previous pass for ${lastGuestNameRef.current} ignored to avoid repeat scan`
+                    : ""
+                );
                 startCamera();
               }}
               className="w-full rounded-xl bg-white/10 py-3 font-mono text-[10px] font-semibold uppercase tracking-widest text-white hover:bg-white hover:text-black transition-colors cursor-pointer"
