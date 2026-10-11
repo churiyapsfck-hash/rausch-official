@@ -358,7 +358,88 @@ export function AdminPage() {
     return matchesStatus && matchesQuery;
   });
 
+  const exportToCSV = (onlyFiltered = false) => {
+    const listToExport = onlyFiltered ? filteredBookings : bookings;
+    if (!listToExport || listToExport.length === 0) {
+      alert("No attendee records available to export.");
+      return;
+    }
 
+    const headers = [
+      "Purchase ID",
+      "Guest Full Name",
+      "Phone Number",
+      "Email Address",
+      "Instagram Handle",
+      "Pass Tier",
+      "Category",
+      "Quantity",
+      "Final Amount Paid (INR)",
+      "Base Tier Price (INR)",
+      "Discount Applied (INR)",
+      "Coupon Code Used",
+      "Status",
+      "UTR / Transaction Ref",
+      "Ticket Token",
+      "Digital Holographic Pass URL",
+      "Booked Date & Time",
+      "Checked-In Date & Time",
+      "Checked-In Verified By",
+      "Payment Screenshot URL",
+    ];
+
+    const escapeCSV = (value: any) => {
+      if (value === null || value === undefined) return '""';
+      const str = String(value).replace(/"/g, '""');
+      return `"${str}"`;
+    };
+
+    const rows = listToExport.map((b) => {
+      const passUrl = b.ticket_token || b.purchase_id
+        ? `${window.location.origin}/p/${b.ticket_token || b.purchase_id}`
+        : "";
+      const ssPath = b.payment_screenshot_path || b.screenshot_path;
+      const ssUrl = ssPath
+        ? supabase.storage.from("payment-screenshots").getPublicUrl(ssPath).data.publicUrl
+        : "";
+
+      return [
+        escapeCSV(b.purchase_id),
+        escapeCSV(b.full_name),
+        escapeCSV(b.phone),
+        escapeCSV(b.email || ""),
+        escapeCSV(b.instagram || ""),
+        escapeCSV(b.pass_type),
+        escapeCSV(b.category || "General"),
+        escapeCSV(b.quantity || 1),
+        escapeCSV(b.final_amount ?? b.price),
+        escapeCSV(b.price || ""),
+        escapeCSV(b.discount_amount || 0),
+        escapeCSV(b.coupon_code || ""),
+        escapeCSV(b.status),
+        escapeCSV(b.utr_number || b.utr || ""),
+        escapeCSV(b.ticket_token || ""),
+        escapeCSV(passUrl),
+        escapeCSV(b.created_at ? new Date(b.created_at).toLocaleString() : ""),
+        escapeCSV(b.checked_in_at ? new Date(b.checked_in_at).toLocaleString() : ""),
+        escapeCSV(b.checked_in_by || ""),
+        escapeCSV(ssUrl),
+      ].join(",");
+    });
+
+    const csvContent = "\uFEFF" + [headers.join(","), ...rows].join("\r\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    const filterTag = onlyFiltered && statusFilter !== "all" ? `_${statusFilter}` : "";
+    const dateStr = new Date().toISOString().slice(0, 10);
+    link.href = url;
+    link.setAttribute("download", `rausch_attendees${filterTag}_${dateStr}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
 
   const [inlineEmail, setInlineEmail] = useState("");
   const [inlinePass, setInlinePass] = useState("");
@@ -494,6 +575,14 @@ export function AdminPage() {
           </div>
 
           <div className="flex items-center gap-3">
+            <button
+              onClick={() => exportToCSV(false)}
+              className="flex items-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-2.5 font-mono text-[10px] uppercase tracking-wider text-emerald-300 hover:bg-emerald-500/20 transition-all cursor-pointer"
+              title="Download all attendee records as CSV"
+            >
+              <Download className="h-3.5 w-3.5 text-emerald-400" />
+              <span>Export CSV ({bookings.length})</span>
+            </button>
             <a
               href="/scan"
               target="_blank"
@@ -617,6 +706,15 @@ export function AdminPage() {
                   title="Refresh table"
                 >
                   <RefreshCw className="h-3.5 w-3.5" />
+                </button>
+
+                <button
+                  onClick={() => exportToCSV(statusFilter !== "all" || searchQuery.length > 0)}
+                  className="flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 px-3 py-2 text-white transition-colors cursor-pointer"
+                  title="Export current view to CSV"
+                >
+                  <Download className="h-3.5 w-3.5 text-silver" />
+                  <span className="hidden sm:inline">Export CSV</span>
                 </button>
               </div>
             </div>
