@@ -18,6 +18,9 @@ export function GateScannerComponent({ accessToken }: GateScannerProps) {
   const [manualCode, setManualCode] = useState("");
   const [checkInCount, setCheckInCount] = useState(0);
   const [resetting, setResetting] = useState(false);
+  const isProcessingRef = useRef(false);
+  const lastScannedTokenRef = useRef("");
+  const lastScanTimeRef = useRef(0);
 
   // Audio chimes
   const playSound = (type: "success" | "warning" | "error") => {
@@ -56,7 +59,19 @@ export function GateScannerComponent({ accessToken }: GateScannerProps) {
   };
 
   const handleVerifyToken = async (token: string) => {
-    if (!token.trim()) return;
+    const clean = token.trim().replace(/^.*\/p\//, "").replace(/^.*token=/, "");
+    if (!clean) {
+      isProcessingRef.current = false;
+      return;
+    }
+
+    const now = Date.now();
+    if (clean === lastScannedTokenRef.current && now - lastScanTimeRef.current < 4000) {
+      return;
+    }
+    lastScannedTokenRef.current = clean;
+    lastScanTimeRef.current = now;
+
     setStatus("verifying");
     setStatusMessage("Verifying pass with gate database...");
 
@@ -64,8 +79,6 @@ export function GateScannerComponent({ accessToken }: GateScannerProps) {
       if ("vibrate" in navigator) {
         navigator.vibrate(50);
       }
-
-      const clean = token.trim().replace(/^.*\/p\//, "").replace(/^.*token=/, "");
 
       const { data: booking, error } = await supabase
         .from("bookings")
@@ -160,23 +173,34 @@ export function GateScannerComponent({ accessToken }: GateScannerProps) {
         videoRef.current!,
         (result) => {
           if (result) {
+            if (isProcessingRef.current) return;
+            isProcessingRef.current = true;
             const text = result.getText();
-            if (text && text !== lastScanned) {
-              setLastScanned(text);
-              handleVerifyToken(text);
-            }
+            stopCamera();
+            handleVerifyToken(text);
           }
         }
       );
     } catch (err) {
       console.error("Camera access error:", err);
       setScanning(false);
+      isProcessingRef.current = false;
     }
   };
 
   const stopCamera = () => {
     if (codeReaderRef.current) {
+      try {
+        codeReaderRef.current.reset();
+      } catch (e) {}
       codeReaderRef.current = null;
+    }
+    if (videoRef.current?.srcObject) {
+      try {
+        const stream = videoRef.current.srcObject as MediaStream;
+        stream.getTracks().forEach((track) => track.stop());
+        videoRef.current.srcObject = null;
+      } catch (e) {}
     }
     setScanning(false);
   };
@@ -282,7 +306,7 @@ export function GateScannerComponent({ accessToken }: GateScannerProps) {
             </div>
           )}
 
-          {status === "already" && scannedBooking && (
+            {status === "already" && scannedBooking && (
             <button
               onClick={() => handleRemoveCheckIn(scannedBooking)}
               disabled={resetting}
@@ -299,6 +323,21 @@ export function GateScannerComponent({ accessToken }: GateScannerProps) {
                   <span>Remove Check-In (Reactivate Pass)</span>
                 </>
               )}
+            </button>
+          )}
+
+          {status !== "idle" && status !== "verifying" && (
+            <button
+              onClick={() => {
+                isProcessingRef.current = false;
+                setStatus("idle");
+                setStatusMessage("");
+                setScannedBooking(null);
+                startCamera();
+              }}
+              className="mt-4 w-full rounded-xl bg-white/10 hover:bg-white hover:text-black py-3 font-mono text-[10px] font-semibold uppercase tracking-widest text-white transition-all cursor-pointer"
+            >
+              SCAN NEXT ATTENDEE →
             </button>
           )}
         </div>

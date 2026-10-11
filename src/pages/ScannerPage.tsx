@@ -19,6 +19,9 @@ export function ScannerPage() {
   const [cameraError, setCameraError] = useState("");
   const videoRef = useRef<HTMLVideoElement>(null);
   const codeReaderRef = useRef<any>(null);
+  const isProcessingRef = useRef(false);
+  const lastScannedTokenRef = useRef("");
+  const lastScanTimeRef = useRef(0);
 
   const checkGateAuth = async (user: any) => {
     if (!user) return false;
@@ -117,9 +120,11 @@ export function ScannerPage() {
           videoRef.current,
           (res, err) => {
             if (res) {
+              if (isProcessingRef.current) return;
+              isProcessingRef.current = true;
               const text = res.getText();
-              handleVerifyToken(text);
               stopCamera();
+              handleVerifyToken(text);
             }
           }
         );
@@ -128,6 +133,7 @@ export function ScannerPage() {
       console.error(err);
       setCameraError(err.message || "Failed to access camera");
       setScanning(false);
+      isProcessingRef.current = false;
     }
   };
 
@@ -135,6 +141,14 @@ export function ScannerPage() {
     if (codeReaderRef.current) {
       try {
         codeReaderRef.current.reset();
+      } catch (e) {}
+      codeReaderRef.current = null;
+    }
+    if (videoRef.current?.srcObject) {
+      try {
+        const stream = videoRef.current.srcObject as MediaStream;
+        stream.getTracks().forEach((track) => track.stop());
+        videoRef.current.srcObject = null;
       } catch (e) {}
     }
     setScanning(false);
@@ -146,7 +160,17 @@ export function ScannerPage() {
 
   const handleVerifyToken = async (rawToken: string) => {
     const clean = rawToken.trim().replace(/^.*\/p\//, "").replace(/^.*token=/, "");
-    if (!clean) return;
+    if (!clean) {
+      isProcessingRef.current = false;
+      return;
+    }
+
+    const now = Date.now();
+    if (clean === lastScannedTokenRef.current && now - lastScanTimeRef.current < 4000) {
+      return;
+    }
+    lastScannedTokenRef.current = clean;
+    lastScanTimeRef.current = now;
 
     setLoading(true);
     setResult(null);
@@ -491,6 +515,7 @@ export function ScannerPage() {
 
             <button
               onClick={() => {
+                isProcessingRef.current = false;
                 setResult(null);
                 setTokenInput("");
                 startCamera();
