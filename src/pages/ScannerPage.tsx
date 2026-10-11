@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
-import { ArrowLeft, Camera, CheckCircle2, XCircle, AlertTriangle, RefreshCw, KeyRound, Loader2, Lock, ShieldCheck } from "lucide-react";
+import { ArrowLeft, Camera, CheckCircle2, XCircle, AlertTriangle, RefreshCw, KeyRound, Loader2, Lock, ShieldCheck, RotateCcw } from "lucide-react";
 
 export function ScannerPage() {
   const [session, setSession] = useState<any>(null);
@@ -10,6 +10,7 @@ export function ScannerPage() {
   const [loginPass, setLoginPass] = useState("");
   const [loginError, setLoginError] = useState("");
   const [submittingLogin, setSubmittingLogin] = useState(false);
+  const [resettingCheckIn, setResettingCheckIn] = useState(false);
 
   const [tokenInput, setTokenInput] = useState("");
   const [scanning, setScanning] = useState(false);
@@ -211,6 +212,34 @@ export function ScannerPage() {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleRemoveCheckIn = async (booking: any) => {
+    if (!booking?.id) return;
+    if (!confirm(`Are you sure you want to remove check-in for ${booking.full_name}? Their pass will become active again.`)) return;
+    setResettingCheckIn(true);
+    try {
+      const { error } = await supabase
+        .from("bookings")
+        .update({
+          status: "confirmed",
+          checked_in_at: null,
+          checked_in_by: null,
+        })
+        .eq("id", booking.id);
+
+      if (error) throw error;
+
+      setResult({
+        status: "success",
+        message: "CHECK-IN REMOVED — Pass is active again and ready for entry",
+        booking: { ...booking, status: "confirmed", checked_in_at: null },
+      });
+    } catch (err: any) {
+      alert(err.message || "Failed to remove check-in");
+    } finally {
+      setResettingCheckIn(false);
     }
   };
 
@@ -438,6 +467,26 @@ export function ScannerPage() {
                   <span className="text-white">{result.booking.phone}</span>
                 </div>
               </div>
+            )}
+
+            {result.status === "already_used" && result.booking && (
+              <button
+                onClick={() => handleRemoveCheckIn(result.booking)}
+                disabled={resettingCheckIn}
+                className="w-full flex items-center justify-center gap-2 rounded-xl border border-amber-500/50 bg-amber-500/10 hover:bg-amber-500/20 py-2.5 font-mono text-[10px] font-semibold uppercase tracking-widest text-amber-300 transition-colors cursor-pointer"
+              >
+                {resettingCheckIn ? (
+                  <>
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    <span>Resetting Check-In...</span>
+                  </>
+                ) : (
+                  <>
+                    <RotateCcw className="h-3.5 w-3.5 text-amber-400" />
+                    <span>Remove Check-In (Reactivate Pass)</span>
+                  </>
+                )}
+              </button>
             )}
 
             <button

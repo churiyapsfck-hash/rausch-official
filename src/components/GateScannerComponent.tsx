@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/lib/supabase";
-import { CheckCircle2, AlertTriangle, XCircle, Camera, Loader2, Volume2, Sparkles } from "lucide-react";
+import { CheckCircle2, AlertTriangle, XCircle, Camera, Loader2, Volume2, Sparkles, RotateCcw } from "lucide-react";
 
 interface GateScannerProps {
   accessToken?: string;
@@ -17,6 +17,7 @@ export function GateScannerComponent({ accessToken }: GateScannerProps) {
   const [scannedBooking, setScannedBooking] = useState<any>(null);
   const [manualCode, setManualCode] = useState("");
   const [checkInCount, setCheckInCount] = useState(0);
+  const [resetting, setResetting] = useState(false);
 
   // Audio chimes
   const playSound = (type: "success" | "warning" | "error") => {
@@ -120,6 +121,29 @@ export function GateScannerComponent({ accessToken }: GateScannerProps) {
       setStatus("invalid");
       setStatusMessage(err.message || "Failed to communicate with gate server");
       playSound("error");
+    }
+  };
+
+  const handleRemoveCheckIn = async (booking: any) => {
+    if (!booking?.id) return;
+    if (!confirm(`Are you sure you want to remove check-in for ${booking.full_name}? Pass will be active again.`)) return;
+    setResetting(true);
+    try {
+      const { error } = await supabase
+        .from("bookings")
+        .update({ status: "confirmed", checked_in_at: null, checked_in_by: null })
+        .eq("id", booking.id);
+
+      if (error) throw error;
+      setStatus("success");
+      setStatusMessage("CHECK-IN REMOVED — Pass is active again and ready for entry");
+      setScannedBooking({ ...booking, status: "confirmed", checked_in_at: null });
+      setCheckInCount((c) => Math.max(0, c - 1));
+      playSound("success");
+    } catch (err: any) {
+      alert(err.message || "Failed to remove check-in");
+    } finally {
+      setResetting(false);
     }
   };
 
@@ -241,7 +265,7 @@ export function GateScannerComponent({ accessToken }: GateScannerProps) {
 
           <p className="font-mono text-xs tracking-wider">{statusMessage}</p>
 
-          {scannedBooking && (
+              {scannedBooking && (
             <div className="mt-4 rounded-xl bg-black/30 p-4 text-left font-mono text-xs space-y-1.5 border border-white/10">
               <div className="flex justify-between">
                 <span className="text-muted-foreground">ATTENDEE:</span>
@@ -256,6 +280,26 @@ export function GateScannerComponent({ accessToken }: GateScannerProps) {
                 <span className="text-white">{scannedBooking.purchase_id}</span>
               </div>
             </div>
+          )}
+
+          {status === "already" && scannedBooking && (
+            <button
+              onClick={() => handleRemoveCheckIn(scannedBooking)}
+              disabled={resetting}
+              className="mt-4 w-full flex items-center justify-center gap-2 rounded-xl border border-amber-500/50 bg-amber-500/10 hover:bg-amber-500/20 py-2.5 font-mono text-[10px] font-semibold uppercase tracking-widest text-amber-300 transition-colors cursor-pointer"
+            >
+              {resetting ? (
+                <>
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                  <span>Resetting Check-In...</span>
+                </>
+              ) : (
+                <>
+                  <RotateCcw className="h-3 w-3 text-amber-400" />
+                  <span>Remove Check-In (Reactivate Pass)</span>
+                </>
+              )}
+            </button>
           )}
         </div>
       )}

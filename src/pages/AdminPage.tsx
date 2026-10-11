@@ -15,6 +15,7 @@ import {
   MessageSquare,
   Plus,
   RefreshCw,
+  RotateCcw,
   Search,
   Send,
   ShieldCheck,
@@ -214,6 +215,28 @@ export function AdminPage() {
       fetchAdminData();
     } catch (err: any) {
       alert(err.message || "Failed to decline booking");
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleRemoveCheckIn = async (booking: any) => {
+    if (!confirm(`Are you sure you want to remove check-in for ${booking.full_name}? Their pass will become active again and eligible for entry.`)) return;
+    setActionLoading(booking.id);
+    try {
+      const { error } = await supabase
+        .from("bookings")
+        .update({
+          status: "confirmed",
+          checked_in_at: null,
+          checked_in_by: null,
+        })
+        .eq("id", booking.id);
+
+      if (error) throw error;
+      fetchAdminData();
+    } catch (err: any) {
+      alert(err.message || "Failed to remove check-in");
     } finally {
       setActionLoading(null);
     }
@@ -773,6 +796,18 @@ export function AdminPage() {
                                     <span>Decline</span>
                                   </button>
                                 </>
+                              )}
+
+                              {b.status === "checked_in" && (
+                                <button
+                                  onClick={() => handleRemoveCheckIn(b)}
+                                  disabled={actionLoading === b.id}
+                                  className="flex items-center gap-1 rounded-lg bg-amber-500/20 border border-amber-500/30 px-2.5 py-1 text-[10px] font-semibold text-amber-300 hover:bg-amber-500/30 transition-colors cursor-pointer"
+                                  title="Remove check-in status and reactivate pass"
+                                >
+                                  <RotateCcw className="h-3 w-3 text-amber-400" />
+                                  <span>Remove Check-In</span>
+                                </button>
                               )}
 
                               {(b.status === "confirmed" || b.status === "checked_in") && (
